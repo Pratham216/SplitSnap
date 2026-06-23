@@ -1,0 +1,16 @@
+{
+  "name": "splitsnap",
+  "private": true,
+  "scripts": {
+    "free-port": "node scripts/free-port.mjs 3001",
+    "predev": "pnpm --filter shared build && pnpm free-port",
+    "dev": "pnpm --parallel --filter backend --filter frontend dev",
+    "predev:backend": "pnpm --filter shared build && pnpm free-port",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter shared build && pnpm --filter backend build && pnpm --filter frontend build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

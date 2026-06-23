@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 min-h-screen antialiased;
+  font-family: var(--font-sans);
+}
+
+.landing-root {
+  font-family: var(--font-sans);
+}
+
+.landing-root .font-serif {
+  font-family: var(--font-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
