@@ -7,6 +7,10 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@splitsnap/shared": ["../shared/src/index.ts"]
+    },
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
