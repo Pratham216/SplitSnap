@@ -1,10 +1,51 @@
-import { verifyToken } from "@clerk/backend";
+import { verifyToken, createClerkClient } from "@clerk/backend";
 import { config } from "../config";
 
 export interface ClerkIdentity {
   clerkId: string;
   email: string;
   name: string;
+}
+
+let clerkClient: ReturnType<typeof createClerkClient> | null = null;
+
+function getClerkClient() {
+  if (!clerkClient) {
+    clerkClient = createClerkClient({ secretKey: config.clerkSecretKey });
+  }
+  return clerkClient;
+}
+
+async function enrichFromClerk(
+  clerkId: string,
+  email: string,
+  name: string
+): Promise<{ email: string; name: string }> {
+  if (email && name) return { email, name };
+
+  try {
+    const user = await getClerkClient().users.getUser(clerkId);
+
+    const resolvedEmail =
+      email ||
+      user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+        ?.emailAddress ||
+      user.emailAddresses[0]?.emailAddress ||
+      "";
+
+    const resolvedName =
+      name ||
+      [user.firstName, user.lastName]
+        .filter((part) => typeof part === "string" && part)
+        .join(" ")
+        .trim() ||
+      user.username ||
+      "";
+
+    return { email: resolvedEmail, name: resolvedName };
+  } catch {
+    return { email, name };
+  }
 }
 
 export async function verifyClerkToken(
@@ -22,20 +63,26 @@ export async function verifyClerkToken(
     const clerkId = payload.sub;
     if (!clerkId) return null;
 
-    const email =
+    const tokenEmail =
       typeof payload.email === "string"
         ? payload.email
         : typeof payload.primary_email_address === "string"
           ? payload.primary_email_address
           : "";
 
-    const name =
+    const tokenName =
       typeof payload.name === "string"
         ? payload.name
         : [payload.given_name, payload.family_name]
             .filter((part) => typeof part === "string" && part)
             .join(" ")
             .trim();
+
+    const { email, name } = await enrichFromClerk(
+      clerkId,
+      tokenEmail,
+      tokenName
+    );
 
     return { clerkId, email, name };
   } catch {
