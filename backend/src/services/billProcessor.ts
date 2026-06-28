@@ -41,6 +41,7 @@ export async function processBill(billId: string): Promise<void> {
   try {
     let parsed: ParsedBill | null = null;
     let ocrText = "";
+    let visionError: unknown;
 
     // 1) Vision: send image directly to GPT-4o-mini
     if (
@@ -50,15 +51,30 @@ export async function processBill(billId: string): Promise<void> {
     ) {
       try {
         parsed = await parseBillFromImage(filePath);
-      } catch (visionError) {
+      } catch (error) {
+        visionError = error;
         console.warn(
-          "Vision parse failed, falling back to OCR + local parser:",
-          visionError instanceof Error ? visionError.message : visionError
+          "Vision parse failed:",
+          error instanceof Error ? error.message : error
         );
       }
     }
 
-    // 2) Fallback: Tesseract OCR + local rules
+    if (!parsed && config.parserMode === "vision") {
+      if (!config.openRouterApiKey) {
+        throw new Error("OPENROUTER_API_KEY is required for vision parsing");
+      }
+
+      if (!isVisionSupportedImage(filePath)) {
+        throw new Error("Vision parsing supports JPG, PNG, and WEBP receipts. Please upload an image instead of a PDF.");
+      }
+
+      throw visionError instanceof Error
+        ? visionError
+        : new Error("Vision parsing failed");
+    }
+
+    // 2) Fallback modes: Tesseract OCR + local/OpenRouter text parser
     if (!parsed) {
       ocrText = await runOcr(filePath);
       await saveOcrDebug(bill._id.toString(), ocrText);
@@ -66,14 +82,6 @@ export async function processBill(billId: string): Promise<void> {
         config.parserMode === "openrouter" && config.openRouterApiKey
           ? await parseBillFromOcr(ocrText)
           : parseBillLocal(ocrText);
-    } else {
-      // Save OCR debug in background for vision path (non-blocking)
-      runOcr(filePath)
-        .then(async (text) => {
-          await saveOcrDebug(bill._id.toString(), text, { logToConsole: false });
-          await Bill.findByIdAndUpdate(bill._id, { ocrText: text });
-        })
-        .catch(() => undefined);
     }
 
     applyParsedBill(bill, parsed, ocrText || undefined);
