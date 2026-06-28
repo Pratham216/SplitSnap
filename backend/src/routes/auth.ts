@@ -21,31 +21,37 @@ router.post("/guest", (_req, res) => {
 });
 
 router.post("/sync", async (req, res) => {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Clerk token required" });
-    return;
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Clerk token required" });
+      return;
+    }
+
+    const clerkToken = header.slice(7);
+    const identity = await verifyClerkToken(clerkToken);
+    if (!identity) {
+      res.status(401).json({ error: "Invalid Clerk token" });
+      return;
+    }
+
+    const user = await findOrCreateUserFromClerk(identity);
+    const token = signUserToken({
+      guestId: user.participantGuestId,
+      userId: user._id.toString(),
+      clerkId: user.clerkId,
+    });
+
+    res.json({
+      token,
+      guestId: user.participantGuestId,
+      user: serializeUser(user),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to sync account";
+    res.status(500).json({ error: message });
   }
-
-  const clerkToken = header.slice(7);
-  const identity = await verifyClerkToken(clerkToken);
-  if (!identity) {
-    res.status(401).json({ error: "Invalid Clerk token" });
-    return;
-  }
-
-  const user = await findOrCreateUserFromClerk(identity);
-  const token = signUserToken({
-    guestId: user.participantGuestId,
-    userId: user._id.toString(),
-    clerkId: user.clerkId,
-  });
-
-  res.json({
-    token,
-    guestId: user.participantGuestId,
-    user: serializeUser(user),
-  });
 });
 
 router.get("/me", requireAuth, (req, res) => {
