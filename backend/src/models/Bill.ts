@@ -1,7 +1,7 @@
 import mongoose, { Schema, Types } from "mongoose";
 import type { BillStatus } from "@splitsnap/shared";
 
-export interface IBillItem {
+export interface IBillItem extends Types.Subdocument {
   _id: Types.ObjectId;
   name: string;
   price: number;
@@ -12,7 +12,7 @@ export interface IBill {
   _id: Types.ObjectId;
   restaurantName: string;
   billDate: string;
-  items: IBillItem[];
+  items: Types.DocumentArray<IBillItem>;
   subtotal?: number;
   tax: number;
   serviceCharge: number;

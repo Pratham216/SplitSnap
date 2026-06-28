@@ -9,11 +9,15 @@ import type { ParsedBill } from "@splitsnap/shared";
 function applyParsedBill(bill: IBill, parsed: ParsedBill, ocrText?: string) {
   bill.restaurantName = parsed.restaurantName;
   bill.billDate = parsed.billDate;
-  bill.items = parsed.items.map((item) => ({
-    name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-  }));
+  bill.items.splice(
+    0,
+    bill.items.length,
+    ...parsed.items.map((item) => ({
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }))
+  );
   bill.subtotal = parsed.subtotal;
   bill.tax = parsed.tax;
   bill.serviceCharge = parsed.serviceCharge;

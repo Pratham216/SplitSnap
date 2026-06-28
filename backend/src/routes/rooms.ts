@@ -15,7 +15,7 @@ import { updateHostUpi, markSelfPaid } from "../services/paymentService";
 
 const router = Router();
 
-router.post("/", requireUser, async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const { billId, hostName, hostUpiId } = req.body;
     if (!billId) {
@@ -23,22 +23,26 @@ router.post("/", requireUser, async (req, res) => {
       return;
     }
 
-    const user = await getUserById(
-      req.auth?.type === "user" ? req.auth.userId : ""
-    );
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+    let resolvedHostName =
+      typeof hostName === "string" && hostName.trim() ? hostName.trim() : "Host";
+    let resolvedUpi =
+      typeof hostUpiId === "string" && hostUpiId.trim()
+        ? hostUpiId.trim()
+        : undefined;
 
-    const resolvedHostName =
-      (typeof hostName === "string" && hostName.trim()) ||
-      user.name ||
-      "Host";
-    const resolvedUpi =
-      (typeof hostUpiId === "string" && hostUpiId.trim()) ||
-      user.upiId ||
-      undefined;
+    if (req.auth?.type === "user") {
+      const user = await getUserById(req.auth.userId);
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+      if (!hostName?.trim() && user.name) {
+        resolvedHostName = user.name;
+      }
+      if (!resolvedUpi && user.upiId) {
+        resolvedUpi = user.upiId;
+      }
+    }
 
     const room = await createRoom(
       billId,
@@ -148,7 +152,7 @@ router.post("/:code/join", requireAuth, async (req, res) => {
   try {
     const { name, avatarUrl } = req.body;
     const { room, participant } = await joinRoom(
-      req.params.code,
+      String(req.params.code),
       req.auth!.guestId,
       name,
       avatarUrl
@@ -169,7 +173,7 @@ router.post("/:code/join", requireAuth, async (req, res) => {
 });
 
 router.delete("/:code/participants/me", requireAuth, async (req, res) => {
-  const room = await getRoomByCode(req.params.code);
+  const room = await getRoomByCode(String(req.params.code));
   if (!room) {
     res.status(404).json({ error: "Room not found" });
     return;
