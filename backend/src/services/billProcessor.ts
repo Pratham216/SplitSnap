@@ -3,7 +3,7 @@ import { runOcr, deleteTempFile } from "./ocr";
 import { saveOcrDebug } from "./ocrDebug";
 import { parseBillFromOcr, parseBillLocal } from "./parser";
 import { isVisionSupportedImage, parseBillFromImage } from "./visionParser";
-import { config } from "../config";
+import { config, isVisionConfigured } from "../config";
 import type { ParsedBill } from "@splitsnap/shared";
 
 function applyParsedBill(bill: IBill, parsed: ParsedBill, ocrText?: string) {
@@ -43,10 +43,10 @@ export async function processBill(billId: string): Promise<void> {
     let ocrText = "";
     let visionError: unknown;
 
-    // 1) Vision: send image directly to GPT-4o-mini
+    // 1) Vision: send image to configured provider (NVIDIA or OpenRouter)
     if (
       config.parserMode === "vision" &&
-      config.openRouterApiKey &&
+      isVisionConfigured() &&
       isVisionSupportedImage(filePath)
     ) {
       try {
@@ -61,8 +61,12 @@ export async function processBill(billId: string): Promise<void> {
     }
 
     if (!parsed && config.parserMode === "vision") {
-      if (!config.openRouterApiKey) {
-        throw new Error("OPENROUTER_API_KEY is required for vision parsing");
+      if (!isVisionConfigured()) {
+        const keyName =
+          config.visionProvider === "nvidia"
+            ? "NVIDIA_API_KEY"
+            : "OPENROUTER_API_KEY";
+        throw new Error(`${keyName} is required for vision parsing`);
       }
 
       if (!isVisionSupportedImage(filePath)) {

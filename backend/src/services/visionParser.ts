@@ -1,7 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
 import { ParsedBillSchema } from "@splitsnap/shared";
-import { config } from "../config";
+import {
+  config,
+  getActiveVisionModel,
+  isVisionConfigured,
+} from "../config";
 
 const VISION_PROMPT = `You are a restaurant bill parser. Read the receipt image and extract structured data.
 
@@ -36,16 +40,22 @@ const MIME_BY_EXT: Record<string, string> = {
   ".webp": "image/webp",
 };
 
+const NVIDIA_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+
 export function isVisionSupportedImage(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
   return ext in MIME_BY_EXT;
 }
 
-export async function parseBillFromImage(imagePath: string) {
-  if (!config.openRouterApiKey) {
-    throw new Error("OPENROUTER_API_KEY is required for vision parsing");
-  }
+function parseJsonFromModelContent(content: string) {
+  const trimmed = content.trim();
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonText = fenceMatch ? fenceMatch[1].trim() : trimmed;
+  return JSON.parse(jsonText);
+}
 
+async function readImageDataUrl(imagePath: string) {
   const ext = path.extname(imagePath).toLowerCase();
   const mime = MIME_BY_EXT[ext];
   if (!mime) {
@@ -54,18 +64,20 @@ export async function parseBillFromImage(imagePath: string) {
 
   const buffer = await fs.readFile(imagePath);
   const base64 = buffer.toString("base64");
-  const dataUrl = `data:${mime};base64,${base64}`;
+  return `data:${mime};base64,${base64}`;
+}
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+async function callOpenRouterVision(dataUrl: string, model: string) {
+  const response = await fetch(OPENROUTER_CHAT_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.openRouterApiKey}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:5173",
+      "HTTP-Referer": config.appUrl || "http://localhost:5173",
       "X-Title": "SplitSnap",
     },
     body: JSON.stringify({
-      model: config.openRouterVisionModel,
+      model,
       max_tokens: config.openRouterMaxTokens,
       messages: [
         {
@@ -86,18 +98,72 @@ export async function parseBillFromImage(imagePath: string) {
     throw new Error(`Vision API error ${response.status}: ${errorText}`);
   }
 
-  const data = (await response.json()) as {
+  return response.json() as Promise<{
     choices?: Array<{ message?: { content?: string } }>;
-  };
+  }>;
+}
+
+async function callNvidiaVision(dataUrl: string, model: string) {
+  const response = await fetch(NVIDIA_CHAT_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.nvidiaApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: config.openRouterMaxTokens,
+      temperature: 0.1,
+      stream: false,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: VISION_PROMPT },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Vision API error ${response.status}: ${errorText}`);
+  }
+
+  return response.json() as Promise<{
+    choices?: Array<{ message?: { content?: string } }>;
+  }>;
+}
+
+export async function parseBillFromImage(imagePath: string) {
+  if (!isVisionConfigured()) {
+    const keyName =
+      config.visionProvider === "nvidia"
+        ? "NVIDIA_API_KEY"
+        : "OPENROUTER_API_KEY";
+    throw new Error(`${keyName} is required for vision parsing`);
+  }
+
+  const dataUrl = await readImageDataUrl(imagePath);
+  const model = getActiveVisionModel();
+
+  const data =
+    config.visionProvider === "nvidia"
+      ? await callNvidiaVision(dataUrl, model)
+      : await callOpenRouterVision(dataUrl, model);
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("Vision API returned empty response");
   }
 
-  const json = JSON.parse(content);
+  const json = parseJsonFromModelContent(content);
   const parsed = ParsedBillSchema.parse(json);
-  console.log(`Vision parse OK (${config.openRouterVisionModel}): ${parsed.items.length} items`);
+  console.log(
+    `Vision parse OK (${config.visionProvider}/${model}): ${parsed.items.length} items`
+  );
   for (const item of parsed.items) {
     console.log(
       `  · ${item.quantity > 1 ? `${item.quantity}× ` : ""}${item.name} → ₹${item.price}`

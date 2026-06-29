@@ -2,7 +2,7 @@ import { createServer } from "http";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import { config } from "./config";
+import { config, getActiveVisionModel } from "./config";
 import { connectDb } from "./db";
 import billsRouter from "./routes/bills";
 import authRouter, { usersRouter } from "./routes/auth";
@@ -63,7 +63,7 @@ async function main() {
     console.log(
       `Bill parser: ${config.parserMode}` +
         (config.parserMode === "vision"
-          ? ` (${config.openRouterVisionModel})`
+          ? ` (${config.visionProvider}/${getActiveVisionModel()})`
           : "")
     );
   });
