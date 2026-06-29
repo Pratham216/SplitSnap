@@ -68,7 +68,9 @@ export default function BillPage() {
     );
   }
 
-  if (!bill) return null;
+  if (!bill || bill.status !== "parsed") {
+    return <ProcessingState />;
+  }
 
   return <BillEditor key={bill.id} bill={bill} />;
 }

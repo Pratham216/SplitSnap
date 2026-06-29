@@ -9,8 +9,16 @@ export default function GuestLayout({ children }: GuestLayoutProps) {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <Link to="/" className="text-xl font-bold tracking-tight text-emerald-400">
-            SplitSnap
+          <Link
+            to="/"
+            className="inline-flex items-center gap-3 text-xl font-bold tracking-tight text-emerald-400"
+          >
+            <img
+              src="/splitsnap-logo.png"
+              alt=""
+              className="h-10 w-10 rounded-xl object-contain"
+            />
+            <span>SplitSnap</span>
           </Link>
         </div>
       </header>
