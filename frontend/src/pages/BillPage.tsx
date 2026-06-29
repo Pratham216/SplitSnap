@@ -78,20 +78,40 @@ export default function BillPage() {
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4">
-      <div className="w-10 h-10 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-      <p className="text-slate-400">Loading bill...</p>
+      <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <p className="text-neutral-400">Loading bill...</p>
     </div>
   );
 }
 
 function ProcessingState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4">
-      <div className="w-12 h-12 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-      <h2 className="text-xl font-semibold">Reading your bill...</h2>
-      <p className="text-slate-400 text-sm">
-        Running OCR and extracting items. This may take a few seconds.
-      </p>
+    <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
+      <span className="relative flex h-16 w-16 items-center justify-center">
+        <span className="absolute inset-0 rounded-full bg-amber-500/10" />
+        <span className="absolute inset-0 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+        <svg
+          className="h-7 w-7 text-amber-400"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="4" y="3" width="16" height="18" rx="2" />
+          <path d="M8 7h8M8 11h8M8 15h5" />
+        </svg>
+      </span>
+      <div className="space-y-1.5">
+        <h2 className="text-xl font-semibold text-neutral-100">
+          Analyzing your bill
+        </h2>
+        <p className="text-neutral-400 text-sm max-w-xs">
+          We're reading the receipt and itemizing everything. This only takes a
+          few seconds.
+        </p>
+      </div>
     </div>
   );
 }
@@ -271,7 +291,7 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
   async function handleAddItem() {
     try {
       const serverBill = await addBillItem(id, {
-        name: "New item",
+        name: "",
         price: 0,
         quantity: 1,
       });
@@ -322,15 +342,16 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold">Review your bill</h2>
-          <p className="text-slate-400 text-sm mt-1">
+          <h2 className="text-3xl font-bold tracking-tight">Review your bill</h2>
+          <p className="text-neutral-400 text-sm mt-2">
             Fix any mistakes before sharing with friends.
           </p>
         </div>
-        <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           Parsed
         </span>
       </div>
@@ -348,20 +369,20 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
         />
       </div>
 
-      <div className="rounded-xl border border-slate-800 overflow-hidden">
-        <div className="bg-slate-900 px-4 py-3 flex items-center justify-between">
-          <h3 className="font-medium">Items</h3>
+      <div className="rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/30">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-800">
+          <h3 className="font-semibold text-neutral-100">Items</h3>
           <button
             onClick={handleAddItem}
-            className="text-sm text-emerald-400 hover:text-emerald-300"
+            className="inline-flex items-center gap-1 text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors"
           >
-            + Add item
+            <span className="text-base leading-none">+</span> Add item
           </button>
         </div>
 
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-neutral-800/70">
           {draft.items.length === 0 && (
-            <p className="px-4 py-6 text-sm text-slate-500 text-center">
+            <p className="px-4 py-6 text-sm text-neutral-500 text-center">
               No items extracted. Add items manually.
             </p>
           )}
@@ -375,7 +396,7 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
           ))}
         </div>
 
-        <div className="bg-slate-900/50 px-4 py-2 text-xs text-slate-500 grid grid-cols-12 gap-2">
+        <div className="bg-neutral-900/40 px-4 py-2 text-xs text-neutral-500 grid grid-cols-12 gap-2 border-t border-neutral-800">
           <span className="col-span-6">Item</span>
           <span className="col-span-2">Qty</span>
           <span className="col-span-3">Amount</span>
@@ -383,7 +404,7 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 rounded-xl border border-slate-800 p-4 bg-slate-900/50">
+      <div className="grid gap-4 sm:grid-cols-2 rounded-2xl border border-neutral-800 p-5 bg-neutral-900/30">
         <NumberField
           label="Tax (GST)"
           value={draft.tax}
@@ -406,39 +427,40 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
         />
       </div>
 
-      <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-emerald-300/80">Items total</p>
-            <p className="text-2xl font-bold text-emerald-300">
-              ₹{itemsTotal.toFixed(2)}
-            </p>
-          </div>
+      <div className="card-premium p-5 space-y-5">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="relative">
+          <p className="text-xs uppercase tracking-wider text-amber-200/70">
+            Items total
+          </p>
+          <p className="mt-1 text-3xl font-bold text-brand">
+            ₹{itemsTotal.toFixed(2)}
+          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex flex-col sm:flex-row gap-3">
           <input
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"
+            className="flex-1 input-field"
             placeholder="Your name (host)"
             value={hostName}
             onChange={(e) => setHostName(e.target.value)}
           />
           {currentUser?.upiId && (
-            <div className="flex-1 bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2.5 text-sm font-mono text-emerald-300/90 flex items-center">
+            <div className="flex-1 input-field font-mono text-neutral-300 flex items-center">
               {currentUser.upiId}
             </div>
           )}
           <button
             onClick={handleCreateRoom}
             disabled={creatingRoom}
-            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-medium text-sm disabled:opacity-50 whitespace-nowrap sm:w-auto w-full"
+            className="btn-primary px-5 py-2.5 text-sm whitespace-nowrap sm:w-auto w-full"
           >
             {creatingRoom ? "Creating..." : "Create room & share"}
           </button>
         </div>
 
-        {roomError && <p className="text-sm text-red-300">{roomError}</p>}
-        {saveError && <p className="text-sm text-amber-300">{saveError}</p>}
+        {roomError && <p className="relative text-sm text-red-300">{roomError}</p>}
+        {saveError && <p className="relative text-sm text-amber-300">{saveError}</p>}
       </div>
     </div>
   );
@@ -486,16 +508,17 @@ function BillItemRow({
   }
 
   return (
-    <div className="px-4 py-3 grid grid-cols-12 gap-2 items-center">
+    <div className="px-4 py-3 grid grid-cols-12 gap-2 items-center hover:bg-neutral-900/40 transition-colors">
       <input
-        className="col-span-6 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+        className="col-span-6 bg-neutral-800/40 border border-neutral-700 rounded-lg px-3 py-2 text-sm outline-none transition focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
         value={item.name}
+        placeholder="Item name"
         onChange={(e) => onChange(item.id, { name: e.target.value })}
       />
       <input
         type="text"
         inputMode="numeric"
-        className="col-span-2 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+        className="col-span-2 bg-neutral-800/40 border border-neutral-700 rounded-lg px-3 py-2 text-sm outline-none transition focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
         value={qtyText}
         onChange={(e) => {
           setQtyText(e.target.value);
@@ -507,11 +530,11 @@ function BillItemRow({
         onBlur={() => commitQty(qtyText)}
       />
       <div className="col-span-3 flex items-center gap-1">
-        <span className="text-slate-500 text-sm">₹</span>
+        <span className="text-neutral-500 text-sm">₹</span>
         <input
           type="text"
           inputMode="decimal"
-          className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+          className="w-full bg-neutral-800/40 border border-neutral-700 rounded-lg px-3 py-2 text-sm outline-none transition focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
           value={priceText}
           onFocus={() => {
             priceFocusedRef.current = true;
@@ -531,7 +554,7 @@ function BillItemRow({
       </div>
       <button
         onClick={() => onDelete(item.id)}
-        className="col-span-1 text-slate-500 hover:text-red-400 text-lg"
+        className="col-span-1 text-neutral-500 hover:text-red-400 text-lg"
         title="Remove"
       >
         ×
@@ -550,10 +573,10 @@ function Field({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="block space-y-1">
-      <span className="text-xs text-slate-400">{label}</span>
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-neutral-400">{label}</span>
       <input
-        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+        className="w-full input-field"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -577,14 +600,14 @@ function NumberField({
   }, [value]);
 
   return (
-    <label className="block space-y-1">
-      <span className="text-xs text-slate-400">{label}</span>
-      <div className="flex items-center gap-1">
-        <span className="text-slate-500">₹</span>
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-neutral-400">{label}</span>
+      <div className="flex items-center gap-1.5 bg-neutral-900/60 border border-neutral-700 rounded-xl px-3 py-2.5 transition focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500/30">
+        <span className="text-neutral-500 text-sm">₹</span>
         <input
           type="text"
           inputMode="decimal"
-          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+          className="w-full bg-transparent text-sm outline-none"
           value={text}
           onChange={(e) => {
             setText(e.target.value);

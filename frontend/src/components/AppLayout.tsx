@@ -7,20 +7,20 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-10">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <header className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/app" className="flex items-center gap-3">
             <img
               src="/splitsnap-logo.png"
-              alt=""
-              className="h-10 w-10 rounded-xl object-contain"
+              alt="SplitSnap Logo"
+              className="h-9 w-9 object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-emerald-400">
+              <h1 className="text-2xl font-extrabold tracking-tight bg-linear-to-br from-amber-200 via-amber-400 to-amber-700 bg-clip-text text-transparent">
                 SplitSnap
               </h1>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-neutral-400">
                 Scan the bill. Tap what you ate. Pay your share.
               </p>
             </div>

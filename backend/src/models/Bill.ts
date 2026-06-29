@@ -28,7 +28,7 @@ export interface IBill {
 
 const billItemSchema = new Schema<IBillItem>(
   {
-    name: { type: String, required: true },
+    name: { type: String, default: "" },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1, default: 1 },
   },

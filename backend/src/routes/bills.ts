@@ -118,12 +118,16 @@ router.post("/:id/items", async (req, res) => {
   }
 
   const { name, price, quantity = 1 } = req.body;
-  if (!name || price === undefined) {
-    res.status(400).json({ error: "name and price are required" });
+  if (price === undefined) {
+    res.status(400).json({ error: "price is required" });
     return;
   }
 
-  bill.items.push({ name, price: Number(price), quantity: Number(quantity) });
+  bill.items.push({
+    name: name ?? "",
+    price: Number(price),
+    quantity: Number(quantity),
+  });
   await bill.save();
   res.json(serializeBill(bill));
 });

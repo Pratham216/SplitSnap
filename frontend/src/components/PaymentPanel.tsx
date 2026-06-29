@@ -63,8 +63,8 @@ export default function PaymentPanel({
     if (guests.length === 0) return null;
 
     return (
-      <div className="rounded-xl border border-slate-800 p-4 space-y-3">
-        <h3 className="font-medium text-sm text-slate-300">Payment status</h3>
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-5 space-y-3">
+        <h3 className="font-semibold text-sm text-neutral-200">Payment status</h3>
         {!hasHostUpi && (
           <p className="text-xs text-amber-400/90">
             Add your UPI ID above so friends can pay you.
@@ -76,21 +76,21 @@ export default function PaymentPanel({
             return (
               <li
                 key={p.id}
-                className="flex items-center justify-between text-sm bg-slate-900/50 rounded-lg px-3 py-2"
+                className="flex items-center justify-between text-sm bg-neutral-900/50 rounded-lg px-3 py-2"
               >
                 <span>{p.name}</span>
                 <div className="flex items-center gap-2">
                   {share && share.total > 0 && (
-                    <span className="text-slate-400">
+                    <span className="text-neutral-400">
                       ₹{share.total.toFixed(2)}
                     </span>
                   )}
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
+                    className={
                       p.paid
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-slate-700 text-slate-400"
-                    }`}
+                        ? "badge-success"
+                        : "text-xs px-2 py-0.5 rounded-full bg-neutral-700 text-neutral-400"
+                    }
                   >
                     {p.paid ? "Paid" : "Pending"}
                   </span>
@@ -105,8 +105,8 @@ export default function PaymentPanel({
 
   if (!myShare || amount <= 0) {
     return (
-      <div className="rounded-xl border border-slate-800 p-4 text-center">
-        <p className="text-sm text-slate-400">
+      <div className="rounded-2xl border border-neutral-800 bg-neutral-900/30 p-5 text-center">
+        <p className="text-sm text-neutral-400">
           Select what you had to see your share and pay.
         </p>
       </div>
@@ -114,32 +114,31 @@ export default function PaymentPanel({
   }
 
   return (
-    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="card-premium p-5 space-y-4">
+      <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
+      <div className="relative flex items-center justify-between">
         <div>
-          <p className="text-sm text-emerald-300/80">You owe</p>
-          <p className="text-2xl font-bold text-emerald-300">
+          <p className="text-xs uppercase tracking-wider text-amber-200/70">
+            You owe
+          </p>
+          <p className="text-3xl font-bold text-brand">
             ₹{amount.toFixed(2)}
           </p>
         </div>
-        {isPaid && (
-          <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300">
-            Marked paid
-          </span>
-        )}
+        {isPaid && <span className="badge-success">Marked paid</span>}
       </div>
 
       {!hasHostUpi ? (
-        <p className="text-sm text-amber-300/90">
+        <p className="relative text-sm text-amber-300/90">
           Host hasn&apos;t added a UPI ID yet — ask them to add it in the room.
         </p>
       ) : (
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex flex-col sm:flex-row gap-2">
           <button
             type="button"
             onClick={handlePayWithUpi}
             disabled={!upiUrl}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-medium text-sm disabled:opacity-50"
+            className="btn-primary flex-1 py-2.5 text-sm"
           >
             Pay with UPI
           </button>
@@ -148,7 +147,7 @@ export default function PaymentPanel({
               type="button"
               onClick={handleMarkPaid}
               disabled={marking}
-              className="flex-1 py-2.5 rounded-xl border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 text-sm disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 text-sm disabled:opacity-50 transition-colors"
             >
               {marking ? "Saving..." : "I've paid"}
             </button>
@@ -157,20 +156,20 @@ export default function PaymentPanel({
       )}
 
       {showQr && upiUrl && (
-        <div className="flex flex-col items-center gap-2 pt-2">
-          <p className="text-xs text-slate-400">Scan with any UPI app</p>
+        <div className="relative flex flex-col items-center gap-2 pt-2">
+          <p className="text-xs text-neutral-400">Scan with any UPI app</p>
           <QRDisplay url={upiUrl} size={160} />
           <button
             type="button"
             onClick={() => setShowQr(false)}
-            className="text-xs text-slate-500 hover:text-slate-300"
+            className="text-xs text-neutral-500 hover:text-neutral-300"
           >
             Close
           </button>
         </div>
       )}
 
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="relative text-sm text-red-300">{error}</p>}
     </div>
   );
 }

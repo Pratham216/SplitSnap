@@ -34,30 +34,62 @@ export default function ScanPage() {
     if (file) handleFile(file);
   }
 
+  const steps = [
+    {
+      title: "Snap or upload",
+      body: "Add a clear photo of your restaurant bill.",
+    },
+    {
+      title: "AI reads it",
+      body: "Items, prices, and taxes are extracted automatically.",
+    },
+    {
+      title: "Review & split",
+      body: "Tweak anything, then share with friends to split.",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold">Scan your bill</h2>
-        <p className="text-slate-400 mt-1">
-          Take a photo or upload a receipt. We'll extract items automatically.
+        <h2 className="text-3xl font-bold tracking-tight">Scan your bill</h2>
+        <p className="text-neutral-400 mt-2 max-w-md">
+          Take a photo or upload a receipt and we'll turn it into an editable,
+          shareable bill in seconds.
         </p>
       </div>
 
       <div
+        role="button"
+        tabIndex={0}
+        aria-disabled={uploading}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !uploading) {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
         className={`
-          border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer
-          transition-colors
-          ${dragOver ? "border-emerald-400 bg-emerald-400/5" : "border-slate-700 hover:border-slate-500"}
-          ${uploading ? "opacity-50 pointer-events-none" : ""}
+          group relative overflow-hidden rounded-3xl border-2 border-dashed
+          p-12 text-center cursor-pointer transition-all duration-200
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60
+          ${
+            dragOver
+              ? "border-amber-400 bg-amber-400/10 scale-[1.01]"
+              : "border-neutral-700 bg-neutral-900/40 hover:border-amber-500/60 hover:bg-neutral-900/70"
+          }
+          ${uploading ? "pointer-events-none" : ""}
         `}
       >
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
         <input
           ref={fileInputRef}
           type="file"
@@ -67,26 +99,102 @@ export default function ScanPage() {
           onChange={onFileChange}
         />
 
-        <div className="text-5xl mb-4">📸</div>
-        <p className="text-lg font-medium">
-          {uploading ? "Uploading..." : "Tap to upload or drop a receipt"}
-        </p>
-        <p className="text-sm text-slate-500 mt-2">JPG, PNG up to 10MB</p>
+        <div className="relative flex flex-col items-center">
+          {uploading ? (
+            <>
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10">
+                <svg
+                  className="h-8 w-8 animate-spin text-amber-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-90"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              </span>
+              <p className="mt-5 text-lg font-semibold text-neutral-100">
+                Reading your receipt…
+              </p>
+              <p className="mt-1 text-sm text-neutral-500">
+                This usually takes a few seconds
+              </p>
+            </>
+          ) : (
+            <>
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 transition-transform group-hover:scale-110">
+                <svg
+                  className="h-8 w-8"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                  <path d="M12 3v13" />
+                  <path d="M8 7l4-4 4 4" />
+                </svg>
+              </span>
+              <p className="mt-5 text-lg font-semibold text-neutral-100">
+                Tap to upload or drop a receipt
+              </p>
+              <p className="mt-1 text-sm text-neutral-500">
+                JPG or PNG, up to 10MB
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-red-300 text-sm">
-          {error}
+        <div className="flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
+          <svg
+            className="mt-0.5 h-4 w-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4M12 16h.01" />
+          </svg>
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="rounded-xl bg-slate-900 border border-slate-800 p-4 text-sm text-slate-400">
-        <p className="font-medium text-slate-300 mb-2">How it works</p>
-        <ol className="list-decimal list-inside space-y-1">
-          <li>Upload a clear photo of your restaurant bill</li>
-          <li>OCR extracts items, prices, and tax</li>
-          <li>Review and edit before sharing with friends</li>
-        </ol>
+      <div className="rounded-2xl bg-neutral-900/60 border border-neutral-800 p-6">
+        <p className="text-sm font-semibold text-neutral-200">How it works</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {steps.map((step, i) => (
+            <div key={step.title} className="flex gap-3 sm:flex-col sm:gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-400">
+                {i + 1}
+              </span>
+              <div>
+                <p className="text-sm font-medium text-neutral-200">
+                  {step.title}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+                  {step.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

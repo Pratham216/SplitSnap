@@ -22,14 +22,17 @@ Return ONLY valid JSON matching this schema:
 
 Rules:
 - Currency is INR (₹). Use numeric values only, no currency symbols.
+- restaurantName: take it ONLY from the header/top area of the receipt (outlet/brand/store name, logo text, or address block). It never has a price or quantity next to it. If you cannot clearly identify it, return "" — do not guess.
+- CRITICAL: any line that has a price and/or a quantity is a purchased item and MUST appear in "items". Never use such a line as restaurantName, and never drop it. The first item line is still an item, not the restaurant name.
 - For each item: "quantity" = qty ordered; "price" = LINE TOTAL / Amount column (not per-unit rate).
   Example: Qty 2, Rate 799, Amount 1598 → { "name": "...", "quantity": 2, "price": 1598 }
 - Example: "4 RAGI MUDDA 440.00" where 440 is line total → { "quantity": 4, "price": 440 }
 - "tax" = total GST (CGST + SGST combined). serviceCharge = service charge if any, else 0.
 - Include food/drink items only. Exclude tax lines, subtotals, payment info from items.
-- Some receipts put the item NAME on one line and Qty / Rate / Amount on the NEXT line (e.g. Leon Grill).
+- Some receipts put the item NAME on one line and Qty / Rate / Amount on the NEXT line.
   Match each name to its following qty-rate-amount row. Do not skip items whose price is on a separate line.
 - Read every visible line item from the image. Do not invent items or prices not on the receipt.
+- The sum of all item prices should equal the printed subtotal. If it is short, you have missed an item — re-scan and include every priced line before answering.
 - If a field is missing, use 0 for numbers and "" for strings.
 - Return only JSON, no markdown.`;
 
@@ -137,6 +140,29 @@ async function callNvidiaVision(dataUrl: string, model: string) {
   }>;
 }
 
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Small vision models sometimes copy the first item line into restaurantName.
+// If the name matches any line item, it is not a real header — blank it out.
+function sanitizeRestaurantName(parsed: { restaurantName: string; items: Array<{ name: string }> }) {
+  const restaurant = normalizeName(parsed.restaurantName ?? "");
+  if (!restaurant) return;
+
+  const matchesItem = parsed.items.some((item) => {
+    const itemName = normalizeName(item.name);
+    return itemName.length > 0 && (itemName === restaurant || restaurant.includes(itemName) || itemName.includes(restaurant));
+  });
+
+  if (matchesItem) {
+    console.log(
+      `Vision: cleared restaurantName "${parsed.restaurantName}" (matched a line item)`
+    );
+    parsed.restaurantName = "";
+  }
+}
+
 export async function parseBillFromImage(imagePath: string) {
   if (!isVisionConfigured()) {
     const keyName =
@@ -161,6 +187,7 @@ export async function parseBillFromImage(imagePath: string) {
 
   const json = parseJsonFromModelContent(content);
   const parsed = ParsedBillSchema.parse(json);
+  sanitizeRestaurantName(parsed);
   console.log(
     `Vision parse OK (${config.visionProvider}/${model}): ${parsed.items.length} items`
   );

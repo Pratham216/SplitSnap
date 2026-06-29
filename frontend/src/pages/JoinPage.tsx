@@ -28,19 +28,20 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-6">
+    <div className="max-w-md mx-auto space-y-7">
       <div>
-        <h2 className="text-2xl font-semibold">Join the bill</h2>
-        <p className="text-slate-400 mt-1">
-          Room code: <span className="text-emerald-400 font-mono">{code}</span>
+        <h2 className="text-3xl font-bold tracking-tight">Join the bill</h2>
+        <p className="text-neutral-400 mt-2">
+          Room code:{" "}
+          <span className="font-mono text-amber-400 font-medium">{code}</span>
         </p>
       </div>
 
       <form onSubmit={handleJoin} className="space-y-4">
-        <label className="block space-y-1">
-          <span className="text-xs text-slate-400">Your name</span>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-neutral-400">Your name</span>
           <input
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5"
+            className="w-full input-field"
             placeholder="e.g. Rahul"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -49,7 +50,7 @@ export default function JoinPage() {
         </label>
 
         {error && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-red-300 text-sm">
+          <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -57,7 +58,7 @@ export default function JoinPage() {
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-medium disabled:opacity-50"
+          className="btn-primary w-full py-2.5 text-sm"
         >
           {loading ? "Joining..." : "Join room"}
         </button>

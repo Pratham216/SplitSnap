@@ -6,7 +6,7 @@
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 min-h-screen antialiased;
+  @apply bg-neutral-950 text-neutral-100 min-h-screen antialiased;
   font-family: var(--font-sans);
 }
 
@@ -20,4 +20,39 @@ body {
 
 html {
   scroll-behavior: smooth;
+}
+
+@layer base {
+  button:not(:disabled),
+  a,
+  label[for],
+  summary,
+  select:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .text-brand {
+    @apply bg-linear-to-r from-amber-200 to-amber-400 bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply rounded-xl bg-linear-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-semibold shadow-lg shadow-amber-500/20 transition disabled:opacity-50 disabled:shadow-none;
+  }
+
+  .card-premium {
+    @apply relative overflow-hidden rounded-2xl border border-amber-500/20 bg-linear-to-br from-amber-500/10 via-neutral-900/40 to-neutral-900/40;
+  }
+
+  .input-field {
+    @apply bg-neutral-900/60 border border-neutral-700 rounded-xl px-3 py-2.5 text-sm outline-none transition focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30;
+  }
+
+  .badge-success {
+    @apply text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300;
+  }
 }

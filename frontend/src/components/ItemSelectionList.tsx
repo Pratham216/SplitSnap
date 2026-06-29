@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   calculatePersonShare,
   getItemUnitPrice,
@@ -7,6 +8,7 @@ import {
 } from "@splitsnap/shared";
 import type { Bill, BillItem } from "../api/bills";
 import type { Participant, Room } from "../api/rooms";
+import { useDebouncedCallback } from "../hooks/useDebouncedCallback";
 
 export function applySelectionChange(
   room: Room,
@@ -30,6 +32,30 @@ export function applySelectionChange(
   }
 
   return { ...room, selections };
+}
+
+function mergePendingSelections(
+  selections: Room["selections"],
+  pendingQty: Record<string, number>,
+  guestId: string
+): Room["selections"] {
+  if (Object.keys(pendingQty).length === 0) return selections;
+
+  const merged = { ...selections };
+  for (const [itemId, quantity] of Object.entries(pendingQty)) {
+    const entry = { ...(merged[itemId] ?? {}) };
+    if (quantity <= 0) {
+      delete entry[guestId];
+    } else {
+      entry[guestId] = quantity;
+    }
+    if (Object.keys(entry).length === 0) {
+      delete merged[itemId];
+    } else {
+      merged[itemId] = entry;
+    }
+  }
+  return merged;
 }
 
 interface ItemSelectionListProps {
@@ -62,7 +88,7 @@ function QuantityStepper({
         type="button"
         disabled={disabled || value <= min}
         onClick={() => onChange(value - 1)}
-        className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+        className="w-7 h-7 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 hover:border-amber-500/40 hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
         aria-label="Decrease quantity"
       >
         −
@@ -74,7 +100,7 @@ function QuantityStepper({
         type="button"
         disabled={disabled || value >= max}
         onClick={() => onChange(value + 1)}
-        className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+        className="w-7 h-7 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 hover:border-amber-500/40 hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
         aria-label="Increase quantity"
       >
         +
@@ -112,8 +138,8 @@ function ClaimBadges({
             key={guestId}
             className={`text-xs px-1.5 py-0.5 rounded-full ${
               isMine
-                ? "bg-emerald-500/20 text-emerald-300"
-                : "bg-slate-700 text-slate-400"
+                ? "bg-white/15 text-white"
+                : "bg-neutral-800 text-neutral-400"
             }`}
           >
             {person.name}
@@ -133,6 +159,50 @@ export default function ItemSelectionList({
   onSetQuantity,
   updatingItemId,
 }: ItemSelectionListProps) {
+  const [pendingQty, setPendingQty] = useState<Record<string, number>>({});
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const applySearch = useDebouncedCallback((value: string) => {
+    setSearchQuery(value.trim().toLowerCase());
+  }, 300);
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery) return bill.items;
+    return bill.items.filter((item) =>
+      item.name.toLowerCase().includes(searchQuery)
+    );
+  }, [bill.items, searchQuery]);
+
+  const displaySelections = useMemo(
+    () =>
+      myGuestId
+        ? mergePendingSelections(selections, pendingQty, myGuestId)
+        : selections,
+    [selections, pendingQty, myGuestId]
+  );
+
+  useEffect(() => {
+    if (!myGuestId) return;
+    setPendingQty((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const itemId of Object.keys(prev)) {
+        const serverQty = getMyQuantity(selections, itemId, myGuestId);
+        if (serverQty === prev[itemId]) {
+          delete next[itemId];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [selections, myGuestId]);
+
+  function handleSetQuantity(itemId: string, quantity: number) {
+    setPendingQty((prev) => ({ ...prev, [itemId]: quantity }));
+    onSetQuantity(itemId, quantity);
+  }
+
   const billForShare = {
     items: bill.items.map((i) => ({
       id: i.id,
@@ -145,54 +215,72 @@ export default function ItemSelectionList({
   };
 
   const myShare = myGuestId
-    ? calculatePersonShare(billForShare, selections, myGuestId)
+    ? calculatePersonShare(billForShare, displaySelections, myGuestId)
     : null;
 
-  const unclaimedUnits = getUnclaimedUnitsCount(billForShare, selections);
+  const unclaimedUnits = getUnclaimedUnitsCount(billForShare, displaySelections);
 
   return (
-    <div className="rounded-xl border border-slate-800 overflow-hidden">
-      <div className="bg-slate-900 px-4 py-3 flex items-center justify-between">
-        <h3 className="font-medium">Tap what you had</h3>
-        {unclaimedUnits > 0 && (
-          <span className="text-xs text-amber-400/90">
-            {unclaimedUnits} unclaimed
-          </span>
-        )}
+    <div className="rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/30">
+      <div className="px-4 py-3 border-b border-neutral-800 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-semibold text-neutral-100">Tap what you had</h3>
+          {unclaimedUnits > 0 && (
+            <span className="text-xs text-amber-400/90 shrink-0">
+              {unclaimedUnits} unclaimed
+            </span>
+          )}
+        </div>
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+            applySearch(e.target.value);
+          }}
+          placeholder="Search dishes..."
+          className="w-full input-field py-2 text-sm"
+        />
       </div>
 
-      <div className="divide-y divide-slate-800">
-        {bill.items.map((item) => {
+      <div className="divide-y divide-neutral-800/70">
+        {filteredItems.length === 0 && (
+          <p className="px-4 py-6 text-sm text-neutral-500 text-center">
+            {searchQuery
+              ? `No items match "${searchInput.trim()}"`
+              : "No items on this bill."}
+          </p>
+        )}
+        {filteredItems.map((item) => {
           const myQty = myGuestId
-            ? getMyQuantity(selections, item.id, myGuestId)
+            ? getMyQuantity(displaySelections, item.id, myGuestId)
             : 0;
-          const totalClaimed = getTotalClaimedForItem(selections, item.id);
+          const totalClaimed = getTotalClaimedForItem(displaySelections, item.id);
           const remaining = item.quantity - totalClaimed;
           const maxForMe = myQty + remaining;
-          const isUpdating = updatingItemId === item.id;
+          const isStepperBusy = updatingItemId === item.id;
           const unitPrice = getItemUnitPrice(item);
           const isMultiQty = item.quantity > 1;
           const isFullyTaken = myQty === 0 && remaining === 0;
-          const canInteract =
-            !isUpdating && !!myGuestId && !isFullyTaken;
+          const canToggle = !!myGuestId && !isFullyTaken;
 
           function handleToggle() {
-            if (!canInteract) return;
+            if (!canToggle) return;
             if (myQty > 0) {
-              onSetQuantity(item.id, 0);
+              handleSetQuantity(item.id, 0);
             } else {
-              onSetQuantity(item.id, 1);
+              handleSetQuantity(item.id, 1);
             }
           }
 
           return (
             <div
               key={item.id}
-              role={canInteract ? "button" : undefined}
-              tabIndex={canInteract ? 0 : undefined}
-              onClick={canInteract ? handleToggle : undefined}
+              role={canToggle ? "button" : undefined}
+              tabIndex={canToggle ? 0 : undefined}
+              onClick={canToggle ? handleToggle : undefined}
               onKeyDown={
-                canInteract
+                canToggle
                   ? (e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
@@ -201,10 +289,12 @@ export default function ItemSelectionList({
                     }
                   : undefined
               }
-              className={`flex gap-3 px-4 py-3 text-sm transition-colors ${
+              className={`flex gap-3 px-4 py-3 text-sm transition-colors border-l-2 ${
                 myQty > 0 && isMultiQty ? "items-start" : "items-center"
-              } ${canInteract ? "cursor-pointer" : "cursor-default"} ${
-                myQty > 0 ? "bg-emerald-500/10" : "hover:bg-slate-900/30"
+              } ${canToggle ? "cursor-pointer" : "cursor-default"} ${
+                myQty > 0
+                  ? "bg-white/5 border-white/70"
+                  : "border-transparent hover:bg-neutral-900/40"
               }`}
             >
               <div
@@ -215,11 +305,11 @@ export default function ItemSelectionList({
                 <input
                   type="checkbox"
                   checked={myQty > 0}
-                  disabled={!canInteract}
+                  disabled={!canToggle}
                   onChange={(e) =>
-                    onSetQuantity(item.id, e.target.checked ? 1 : 0)
+                    handleSetQuantity(item.id, e.target.checked ? 1 : 0)
                   }
-                  className="w-4 h-4 rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/50 disabled:opacity-50"
+                  className="w-4 h-4 rounded border-neutral-500 text-neutral-200 focus:ring-white/30 disabled:opacity-50"
                 />
               </div>
 
@@ -227,17 +317,17 @@ export default function ItemSelectionList({
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span
                     className={
-                      canInteract || myQty > 0 ? "text-slate-100" : "text-slate-400"
+                      canToggle || myQty > 0 ? "text-neutral-100" : "text-neutral-400"
                     }
                   >
                     {isMultiQty && (
-                      <span className="text-slate-500">{item.quantity}× </span>
+                      <span className="text-neutral-500">{item.quantity}× </span>
                     )}
                     {item.name}
                   </span>
                   <ClaimBadges
                     item={item}
-                    selections={selections}
+                    selections={displaySelections}
                     participants={participants}
                     myGuestId={myGuestId}
                   />
@@ -249,23 +339,23 @@ export default function ItemSelectionList({
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
-                    <span className="text-xs text-slate-400">You had</span>
+                    <span className="text-xs text-neutral-400">You had</span>
                     <QuantityStepper
                       compact
                       value={myQty}
                       min={0}
                       max={maxForMe}
-                      disabled={isUpdating || !myGuestId}
-                      onChange={(qty) => onSetQuantity(item.id, qty)}
+                      disabled={isStepperBusy || !myGuestId}
+                      onChange={(qty) => handleSetQuantity(item.id, qty)}
                     />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-neutral-500">
                       · ₹{unitPrice.toFixed(2)} each
                     </span>
                   </div>
                 )}
               </div>
 
-              <span className="text-slate-300 shrink-0">
+              <span className="text-neutral-300 shrink-0">
                 ₹{item.price.toFixed(2)}
               </span>
             </div>
@@ -274,16 +364,16 @@ export default function ItemSelectionList({
       </div>
 
       {myShare && (
-        <div className="bg-emerald-500/10 border-t border-emerald-500/20 px-4 py-4 space-y-1">
+        <div className="relative border-t border-amber-500/20 bg-linear-to-br from-amber-500/10 via-neutral-900/40 to-neutral-900/40 px-4 py-4 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-emerald-300">
+            <span className="text-xs uppercase tracking-wider text-amber-200/70">
               Your share
             </span>
-            <span className="text-2xl font-bold text-emerald-300">
+            <span className="text-2xl font-bold text-brand">
               ₹{myShare.total.toFixed(2)}
             </span>
           </div>
-          <p className="text-xs text-emerald-300/70">
+          <p className="text-xs text-neutral-400">
             Items ₹{myShare.itemsTotal.toFixed(2)}
             {myShare.tax > 0 && ` · Tax ₹${myShare.tax.toFixed(2)}`}
             {myShare.serviceCharge > 0 &&

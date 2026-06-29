@@ -46,18 +46,18 @@ export default function HostUpiCard({
       <div
         className={
           variant === "banner"
-            ? "rounded-xl border border-slate-800 bg-slate-900/50 p-4 flex items-center justify-between gap-3"
+            ? "rounded-2xl border border-neutral-800 bg-neutral-900/30 p-4 flex items-center justify-between gap-3"
             : "text-sm"
         }
       >
         <div>
-          <p className="text-xs text-slate-400">Your UPI ID</p>
-          <p className="font-mono text-emerald-300">{hostUpiId}</p>
+          <p className="text-xs text-neutral-400">Your UPI ID</p>
+          <p className="font-mono text-amber-300">{hostUpiId}</p>
         </div>
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-sm text-slate-400 hover:text-slate-200 shrink-0"
+          className="text-sm text-neutral-400 hover:text-neutral-200 shrink-0"
         >
           Edit
         </button>
@@ -69,7 +69,7 @@ export default function HostUpiCard({
     <div
       className={
         variant === "banner"
-          ? "rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3"
+          ? "rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3"
           : "space-y-3"
       }
     >
@@ -83,7 +83,7 @@ export default function HostUpiCard({
       </div>
       <div className="flex flex-col sm:flex-row gap-2">
         <input
-          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono"
+          className="flex-1 input-field font-mono"
           placeholder="yourname@ybl"
           value={upiId}
           onChange={(e) => setUpiId(e.target.value)}
@@ -92,7 +92,7 @@ export default function HostUpiCard({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-medium disabled:opacity-50"
+          className="btn-primary px-4 py-2 text-sm"
         >
           {saving ? "Saving..." : "Save"}
         </button>
@@ -105,7 +105,7 @@ export default function HostUpiCard({
             setUpiId(hostUpiId);
             setError(null);
           }}
-          className="text-xs text-slate-500 hover:text-slate-300"
+          className="text-xs text-neutral-500 hover:text-neutral-300"
         >
           Cancel
         </button>
