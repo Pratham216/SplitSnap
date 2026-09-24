@@ -10,14 +10,15 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
-import Button from "./Button";
+import Button from "../ui/Button";
 import {
   SUPPORT_EMAIL,
   buildSupportMessage,
   formatSupportClipboard,
   openSupportInMailApp,
-} from "../lib/support";
-import { colors, fontSize, radius, spacing } from "../theme";
+} from "../../lib/support";
+import { useToast } from "../../contexts/ToastContext";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface SupportSheetProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export default function SupportSheet({
   onClose,
   user,
 }: SupportSheetProps) {
+  const toast = useToast();
   const [message, setMessage] = useState(() => buildSupportMessage(user));
   const [copied, setCopied] = useState(false);
 
@@ -43,10 +45,14 @@ export default function SupportSheet({
   async function handleCopy() {
     await Clipboard.setStringAsync(formatSupportClipboard(message));
     setCopied(true);
+    toast.success("Feedback copied to clipboard!");
   }
 
-  function handleOpenMail() {
-    void openSupportInMailApp(message);
+  async function handleOpenMail() {
+    const ok = await openSupportInMailApp(message);
+    if (!ok) {
+      toast.info(`Email us directly at ${SUPPORT_EMAIL}`);
+    }
   }
 
   return (

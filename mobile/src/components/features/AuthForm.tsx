@@ -15,10 +15,10 @@ import {
 } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import Button from "./Button";
-import { GoogleIcon, AppleIcon } from "./OAuthIcons";
-import { useAuth } from "../contexts/AuthContext";
-import { colors, fontSize, radius, spacing } from "../theme";
+import Button from "../ui/Button";
+import { GoogleIcon, AppleIcon } from "../ui/OAuthIcons";
+import { useAuth } from "../../contexts/AuthContext";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 WebBrowser.maybeCompleteAuthSession();
 

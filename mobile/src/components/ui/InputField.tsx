@@ -7,7 +7,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, fontSize, radius, spacing } from "../theme";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface InputFieldProps {
   label: string;

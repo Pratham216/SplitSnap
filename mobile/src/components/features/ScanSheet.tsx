@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fontSize, radius, spacing } from "../theme";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface ScanSheetProps {
   visible: boolean;

@@ -1,8 +1,8 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import ScreenContainer from "../components/ScreenContainer";
-import Button from "../components/Button";
-import { colors, fontSize, spacing, typography } from "../theme";
+import ScreenContainer from "../layout/ScreenContainer";
+import Button from "../ui/Button";
+import { colors, fontSize, spacing, typography } from "../../theme";
 
 interface Props {
   children: ReactNode;

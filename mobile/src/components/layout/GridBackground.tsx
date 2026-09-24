@@ -1,7 +1,7 @@
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import Svg, { Defs, Line, Pattern, Rect } from "react-native-svg";
-import { colors } from "../theme";
-import { noPointer } from "../lib/platformStyles";
+import { colors } from "../../theme";
+import { noPointer } from "../../lib/platformStyles";
 
 const GRID_SIZE = 80;
 

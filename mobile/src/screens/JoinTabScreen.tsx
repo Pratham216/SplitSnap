@@ -2,13 +2,16 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import ScreenContainer from "../components/ScreenContainer";
-import MobileHeader from "../components/MobileHeader";
-import Button from "../components/Button";
-import InputField from "../components/InputField";
+import {
+  Button,
+  InputField,
+  MobileHeader,
+  ScreenContainer,
+} from "../components";
 import { joinRoom } from "../api/rooms";
 import { saveRoom } from "../lib/history";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { colors, fontSize, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
@@ -16,6 +19,7 @@ export default function JoinTabScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
+  const toast = useToast();
   const [code, setCode] = useState("");
   const [name, setName] = useState(user?.name ?? "");
   const [step, setStep] = useState<"code" | "name">("code");
@@ -42,9 +46,12 @@ export default function JoinTabScreen() {
         role: "guest",
         restaurantName: room.bill?.restaurantName,
       });
+      toast.success(`Joined ${room.bill?.restaurantName || "room"}!`);
       navigation.navigate("Room", { code: room.code });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to join room");
+      const msg = err instanceof Error ? err.message : "Failed to join room";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

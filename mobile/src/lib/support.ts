@@ -1,4 +1,4 @@
-import { Alert, Linking, Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import Constants from "expo-constants";
 
 export const SUPPORT_EMAIL =
@@ -34,29 +34,25 @@ function openMailtoOnWeb(url: string) {
   document.body.removeChild(link);
 }
 
-export async function openSupportInMailApp(message: string) {
+export async function openSupportInMailApp(message: string): Promise<boolean> {
   const url = buildMailtoUrl(SUPPORT_SUBJECT, message);
 
   if (Platform.OS === "web") {
     openMailtoOnWeb(url);
-    return;
+    return true;
   }
 
   try {
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       await Linking.openURL(url);
-      return;
+      return true;
     }
   } catch {
     // Fall through.
   }
 
-  Alert.alert(
-    "Email ZapTab",
-    `Write to ${SUPPORT_EMAIL} and we'll get back to you.`,
-    [{ text: "OK" }],
-  );
+  return false;
 }
 
 export function formatSupportClipboard(message: string) {

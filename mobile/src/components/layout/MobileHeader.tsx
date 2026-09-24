@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import GradientGoldText from "./GradientGoldText";
-import { colors, fontSize, spacing } from "../theme";
-import { emeraldGlowShadow, successGlowShadow } from "../lib/platformStyles";
+import GradientGoldText from "../ui/GradientGoldText";
+import { colors, fontSize, spacing } from "../../theme";
+import { emeraldGlowShadow, successGlowShadow } from "../../lib/platformStyles";
 
 interface MobileHeaderProps {
   title: string;

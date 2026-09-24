@@ -8,9 +8,11 @@ import RoomScreen from "../screens/RoomScreen";
 import StatusScreen from "../screens/StatusScreen";
 import SignInScreen from "../screens/SignInScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
-import Button from "../components/Button";
-import ScreenContainer from "../components/ScreenContainer";
-import AnimatedSplashScreen from "../components/AnimatedSplashScreen";
+import {
+  AnimatedSplashScreen,
+  Button,
+  ScreenContainer,
+} from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, typography } from "../theme";
 

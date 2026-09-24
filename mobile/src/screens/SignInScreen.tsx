@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from "react-native";
-import ScreenContainer from "../components/ScreenContainer";
-import ZapTabWordmark from "../components/ZapTabWordmark";
-import ShimmerWelcomeText from "../components/ShimmerWelcomeText";
-import AuthForm from "../components/AuthForm";
+import {
+  AuthForm,
+  ScreenContainer,
+  ShimmerWelcomeText,
+  ZapTabWordmark,
+} from "../components";
 import { colors, fontSize, spacing } from "../theme";
 
 export default function SignInScreen() {

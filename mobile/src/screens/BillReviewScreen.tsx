@@ -7,10 +7,12 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import ScreenContainer from "../components/ScreenContainer";
-import Button from "../components/Button";
-import BillEditor from "../components/BillEditor";
-import AnimatedEllipsis from "../components/AnimatedEllipsis";
+import {
+  AnimatedEllipsis,
+  BillEditor,
+  Button,
+  ScreenContainer,
+} from "../components";
 import {
   getBill,
   getBillStatus,

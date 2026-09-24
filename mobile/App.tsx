@@ -3,10 +3,13 @@ import { Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { tokenCache } from "./src/lib/tokenCache";
+import { queryClient } from "./src/lib/queryClient";
 import { AuthProvider } from "./src/contexts/AuthContext";
+import { ToastProvider } from "./src/contexts/ToastContext";
 import AppNavigator from "./src/navigation/AppNavigator";
-import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { ErrorBoundary } from "./src/components";
 
 const clerkPublishableKey =
   process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
@@ -35,10 +38,14 @@ export default function App() {
           tokenCache={tokenCache}
         >
           <ClerkLoaded>
-            <AuthProvider>
-              <StatusBar style="light" />
-              <AppNavigator />
-            </AuthProvider>
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                <ToastProvider>
+                  <StatusBar style="light" />
+                  <AppNavigator />
+                </ToastProvider>
+              </AuthProvider>
+            </QueryClientProvider>
           </ClerkLoaded>
         </ClerkProvider>
       </SafeAreaProvider>

@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fontSize, radius, spacing } from "../theme";
-import { goldGlowShadow } from "../lib/platformStyles";
+import { colors, fontSize, radius, spacing } from "../../theme";
+import { goldGlowShadow } from "../../lib/platformStyles";
 
 interface TabBarProps extends BottomTabBarProps {
   onScanPress: () => void;

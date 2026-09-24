@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { isValidUpiId } from "@zaptab/shared";
-import ScreenContainer from "../components/ScreenContainer";
-import Button from "../components/Button";
-import GradientGoldText from "../components/GradientGoldText";
+import {
+  Button,
+  GradientGoldText,
+  ScreenContainer,
+} from "../components";
 import { updateUserUpi } from "../api/users";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, fontSize, radius, spacing } from "../theme";

@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { colors, radius } from "../theme";
+import { colors, radius } from "../../theme";
 
 interface QRDisplayProps {
   url: string;

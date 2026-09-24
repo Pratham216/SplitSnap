@@ -1,16 +1,19 @@
 import { useState } from "react";
-import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import ScreenContainer from "../components/ScreenContainer";
-import MobileHeader from "../components/MobileHeader";
-import Card from "../components/Card";
-import Button from "../components/Button";
-import SupportSheet from "../components/SupportSheet";
-import ZapTabWordmark from "../components/ZapTabWordmark";
+import {
+  Button,
+  Card,
+  MobileHeader,
+  ScreenContainer,
+  SupportSheet,
+  ZapTabWordmark,
+} from "../components";
 import { updateUserUpi } from "../api/users";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { isValidUpiId } from "@zaptab/shared";
 import { colors, fontSize, radius, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
@@ -19,6 +22,7 @@ export default function ProfileScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, completeOnboarding } = useAuth();
+  const toast = useToast();
   const [supportOpen, setSupportOpen] = useState(false);
   const [editingUpi, setEditingUpi] = useState(false);
   const [upiDraft, setUpiDraft] = useState(user?.upiId ?? "");
@@ -79,8 +83,11 @@ export default function ProfileScreen() {
                     const updated = await updateUserUpi(trimmed);
                     completeOnboarding(updated);
                     setEditingUpi(false);
+                    toast.success("UPI ID updated!");
                   } catch (err) {
-                    setUpiError(err instanceof Error ? err.message : "Failed to save");
+                    const msg = err instanceof Error ? err.message : "Failed to save";
+                    setUpiError(msg);
+                    toast.error(msg);
                   } finally {
                     setUpiSaving(false);
                   }

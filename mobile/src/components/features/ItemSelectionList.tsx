@@ -8,11 +8,11 @@ import {
   getTotalClaimedForItem,
   getUnclaimedUnitsCount,
 } from "@zaptab/shared";
-import type { Bill, BillItem } from "../api/bills";
-import type { Participant, Room } from "../api/rooms";
-import { useDebouncedCallback } from "../hooks/useDebouncedCallback";
-import { getBillForShare } from "../lib/payments";
-import { colors, fontSize, radius, spacing } from "../theme";
+import type { Bill, BillItem } from "../../api/bills";
+import type { Participant, Room } from "../../api/rooms";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { getBillForShare } from "../../lib/payments";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface ItemSelectionListProps {
   bill: Bill;

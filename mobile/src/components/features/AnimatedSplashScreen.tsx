@@ -7,9 +7,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { colors, spacing } from "../theme";
+import { colors, spacing } from "../../theme";
 
-import ZapTabWordmark from "./ZapTabWordmark";
+import ZapTabWordmark from "../ui/ZapTabWordmark";
 
 interface AnimatedSplashScreenProps {
   isReady: boolean;
@@ -126,7 +126,7 @@ export default function AnimatedSplashScreen({
           ]}
         >
           <Image
-            source={require("../../assets/zaptab-logo.png")}
+            source={require("../../../assets/zaptab-logo.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />

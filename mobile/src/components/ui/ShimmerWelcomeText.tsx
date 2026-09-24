@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Platform, StyleSheet, Text, type TextStyle } from "react-native";
-import { fontSize } from "../theme";
+import { fontSize } from "../../theme";
 
 const WEB_SHIMMER: TextStyle = {
   backgroundImage:

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -10,13 +9,17 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import ScreenContainer from "../components/ScreenContainer";
-import Button from "../components/Button";
-import Card from "../components/Card";
-import QRDisplay from "../components/QRDisplay";
-import ItemSelectionList from "../components/ItemSelectionList";
-import PaymentPanel from "../components/PaymentPanel";
-import UserAvatar from "../components/UserAvatar";
+import {
+  Button,
+  Card,
+  ConfirmModal,
+  ItemSelectionList,
+  PaymentPanel,
+  QRDisplay,
+  ScreenContainer,
+  UserAvatar,
+} from "../components";
+import { useToast } from "../contexts/ToastContext";
 import {
   getRoom,
   leaveRoom,
@@ -48,6 +51,7 @@ function formatExpiresIn(expiresAtIso?: string): string | null {
 export default function RoomScreen({ navigation, route }: Props) {
   const roomCode = route.params.code.toUpperCase();
   const { session } = useAuth();
+  const toast = useToast();
   const myGuestId = session?.guestId ?? null;
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -56,6 +60,8 @@ export default function RoomScreen({ navigation, route }: Props) {
   const [copied, setCopied] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const loadRoom = useCallback(async () => {
     try {
@@ -102,48 +108,25 @@ export default function RoomScreen({ navigation, route }: Props) {
     if (!room?.joinUrl) return;
     await Clipboard.setStringAsync(room.joinUrl);
     setCopied(true);
+    toast.success("Invite link copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleLeave() {
-    const doLeave = async () => {
-      try {
-        await leaveRoom(roomCode);
-      } catch (err) {
-        console.warn("Error leaving room on server:", err);
-      } finally {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Main" }],
-        });
-      }
-    };
-
-    if (Platform.OS === "web") {
-      const confirmed =
-        typeof window !== "undefined"
-          ? window.confirm(
-              "Leave room?\n\nYou'll exit this bill split. You can rejoin with the room code."
-            )
-          : true;
-      if (confirmed) {
-        await doLeave();
-      }
-      return;
+  async function handleConfirmLeave() {
+    setLeaving(true);
+    try {
+      await leaveRoom(roomCode);
+    } catch (err) {
+      console.warn("Error leaving room on server:", err);
+    } finally {
+      setLeaving(false);
+      setLeaveModalVisible(false);
+      toast.info("You left the split room");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Main" }],
+      });
     }
-
-    Alert.alert(
-      "Leave room?",
-      "You'll exit this bill split. You can rejoin with the room code.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Leave",
-          style: "destructive",
-          onPress: () => void doLeave(),
-        },
-      ]
-    );
   }
 
   async function handleSetQuantity(itemId: string, quantity: number) {
@@ -285,7 +268,7 @@ export default function RoomScreen({ navigation, route }: Props) {
         <Button
           label="Leave room"
           variant="danger"
-          onPress={handleLeave}
+          onPress={() => setLeaveModalVisible(true)}
           style={styles.footerButton}
         />
         {bill ? (
@@ -297,6 +280,18 @@ export default function RoomScreen({ navigation, route }: Props) {
           />
         ) : null}
       </View>
+
+      <ConfirmModal
+        visible={leaveModalVisible}
+        title="Leave Split Room?"
+        message="You'll exit this bill split session. You can always rejoin anytime with the room code."
+        confirmLabel="Leave Room"
+        cancelLabel="Stay"
+        variant="danger"
+        loading={leaving}
+        onCancel={() => setLeaveModalVisible(false)}
+        onConfirm={handleConfirmLeave}
+      />
     </ScreenContainer>
   );
 }

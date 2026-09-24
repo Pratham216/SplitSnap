@@ -1,14 +1,15 @@
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { uploadBillImage } from "../api/bills";
 import { saveReceipt } from "../lib/history";
+import { useToast } from "../contexts/ToastContext";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
 export function useScanBill(
   navigation: NativeStackNavigationProp<RootStackParamList>
 ) {
+  const toast = useToast();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export function useScanBill(
         imageUri: asset.uri,
       });
       setSheetVisible(false);
+      toast.success("Receipt uploaded! Reviewing bill...");
       navigation.navigate("BillReview", {
         billId: id,
         imageUri: asset.uri,
@@ -41,6 +43,7 @@ export function useScanBill(
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
       setError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -49,10 +52,7 @@ export function useScanBill(
   async function takePhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        "Camera permission needed",
-        "Allow camera access to scan your bill."
-      );
+      toast.warning("Camera access is needed to scan your bill.");
       return;
     }
 
@@ -69,10 +69,7 @@ export function useScanBill(
   async function chooseFromLibrary() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert(
-        "Photo permission needed",
-        "Allow photo access to upload a receipt."
-      );
+      toast.warning("Photo library access is needed to upload a receipt.");
       return;
     }
 

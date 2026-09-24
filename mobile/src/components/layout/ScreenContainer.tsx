@@ -11,7 +11,7 @@ import {
   type Edge,
 } from "react-native-safe-area-context";
 import GridBackground from "./GridBackground";
-import { colors, spacing } from "../theme";
+import { colors, spacing } from "../../theme";
 
 interface ScreenContainerProps {
   children: ReactNode;

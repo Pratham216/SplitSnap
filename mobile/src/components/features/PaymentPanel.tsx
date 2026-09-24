@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { isValidUpiId } from "@zaptab/shared";
-import Button from "./Button";
-import Card from "./Card";
-import InputField from "./InputField";
-import { markSelfPaid, updateHostUpi, type Room } from "../api/rooms";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
+import InputField from "../ui/InputField";
+import { markSelfPaid, updateHostUpi, type Room } from "../../api/rooms";
 import {
   buildPaymentUpiUrl,
   getMyShare,
   getParticipantShare,
-} from "../lib/payments";
-import { colors, fontSize, spacing } from "../theme";
+} from "../../lib/payments";
+import { colors, fontSize, spacing } from "../../theme";
 
 interface PaymentPanelProps {
   room: Room;

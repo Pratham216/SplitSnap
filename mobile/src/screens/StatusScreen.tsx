@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import ScreenContainer from "../components/ScreenContainer";
-import Card from "../components/Card";
-import Button from "../components/Button";
+import { Button, Card, ScreenContainer } from "../components";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, fontSize, spacing, typography } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";

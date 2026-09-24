@@ -5,7 +5,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, radius, spacing } from "../theme";
+import { colors, radius, spacing } from "../../theme";
 
 interface CardProps {
   children: ReactNode;

@@ -13,8 +13,8 @@ import {
   type ViewStyle,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
-import { colors, fontSize, radius, spacing } from "../theme";
-import { goldGlowShadow, noPointer } from "../lib/platformStyles";
+import { colors, fontSize, radius, spacing } from "../../theme";
+import { goldGlowShadow, noPointer } from "../../lib/platformStyles";
 
 type Variant =
   | "primary"
@@ -24,7 +24,7 @@ type Variant =
   | "goldOutline"
   | "copyLink";
 
-interface ButtonProps {
+export interface ButtonProps {
   label: string;
   onPress?: () => void;
   variant?: Variant;
