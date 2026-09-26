@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import { useQueryClient } from "@tanstack/react-query";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { uploadBillImage } from "../api/bills";
 import { saveReceipt } from "../lib/history";
+import { BILLS_QUERY_KEY } from "./useBillsQuery";
 import { useToast } from "../contexts/ToastContext";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
@@ -10,6 +12,7 @@ export function useScanBill(
   navigation: NativeStackNavigationProp<RootStackParamList>
 ) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,7 @@ export function useScanBill(
         restaurantName: "Receipt",
         imageUri: asset.uri,
       });
+      void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
       setSheetVisible(false);
       toast.success("Receipt uploaded! Reviewing bill...");
       navigation.navigate("BillReview", {

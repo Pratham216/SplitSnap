@@ -207,21 +207,23 @@ function normalizeName(value: string): string {
 }
 
 // Small vision models sometimes copy the first item line into restaurantName.
-// If the name matches any line item, it is not a real header — blank it out.
+// If the name is an EXACT match to an individual line item (and there are multiple items), clear it.
 function sanitizeRestaurantName(parsed: { restaurantName: string; items: Array<{ name: string }> }) {
   const restaurant = normalizeName(parsed.restaurantName ?? "");
-  if (!restaurant) return;
+  if (!restaurant || restaurant.length < 2) return;
 
-  const matchesItem = parsed.items.some((item) => {
-    const itemName = normalizeName(item.name);
-    return itemName.length > 0 && (itemName === restaurant || restaurant.includes(itemName) || itemName.includes(restaurant));
-  });
+  if (parsed.items.length > 1) {
+    const exactMatch = parsed.items.some((item) => {
+      const itemName = normalizeName(item.name);
+      return itemName.length > 0 && itemName === restaurant;
+    });
 
-  if (matchesItem) {
-    console.log(
-      `Vision: cleared restaurantName "${parsed.restaurantName}" (matched a line item)`
-    );
-    parsed.restaurantName = "";
+    if (exactMatch) {
+      console.log(
+        `Vision: cleared restaurantName "${parsed.restaurantName}" (exact match to a line item)`
+      );
+      parsed.restaurantName = "";
+    }
   }
 }
 
@@ -282,7 +284,7 @@ export async function parseBillFromImage(imagePath: string) {
       `  · ${item.quantity > 1 ? `${item.quantity}× ` : ""}${item.name} → ₹${item.price}`
     );
   }
-  if (parsed.tax > 0) {
+  if ((parsed.tax ?? 0) > 0) {
     console.log(`  · tax ₹${parsed.tax}, total ₹${parsed.grandTotal ?? "?"}`);
   }
   return parsed;

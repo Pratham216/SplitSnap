@@ -7,7 +7,7 @@ interface QRDisplayProps {
   size?: number;
 }
 
-export default function QRDisplay({ url, size = 180 }: QRDisplayProps) {
+export default function QRDisplay({ url, size = 160 }: QRDisplayProps) {
   return (
     <View style={styles.wrap}>
       <QRCode value={url} size={size} backgroundColor="#ffffff" color="#000000" />
@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   wrap: {
     backgroundColor: "#ffffff",
     borderRadius: radius.md,
-    padding: 12,
+    padding: 14,
     alignSelf: "center",
   },
 });

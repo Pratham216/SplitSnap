@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   Button,
   Card,
+  ConfirmModal,
   MobileHeader,
   ScreenContainer,
   SupportSheet,
@@ -14,6 +15,7 @@ import {
 import { updateUserUpi } from "../api/users";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
+import { useClearAllRoomsMutation } from "../hooks/useRoomsQuery";
 import { isValidUpiId } from "@zaptab/shared";
 import { colors, fontSize, radius, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
@@ -23,7 +25,10 @@ export default function ProfileScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, completeOnboarding } = useAuth();
   const toast = useToast();
+  const clearAllRoomsMutation = useClearAllRoomsMutation();
   const [supportOpen, setSupportOpen] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const [editingUpi, setEditingUpi] = useState(false);
   const [upiDraft, setUpiDraft] = useState(user?.upiId ?? "");
   const [upiSaving, setUpiSaving] = useState(false);
@@ -116,6 +121,31 @@ export default function ProfileScreen() {
         )}
       </Card>
 
+      <Text style={styles.sectionTitle}>Data & Storage</Text>
+      <Card>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear history"
+          onPress={() => setConfirmClearOpen(true)}
+          style={({ pressed }) => [
+            styles.clearRow,
+            pressed && styles.clearRowPressed,
+          ]}
+        >
+          <View style={styles.clearIcon}>
+            <Ionicons name="trash-bin-outline" size={18} color={colors.danger} />
+          </View>
+          <View style={styles.supportCopy}>
+            <Text style={[styles.supportText, { color: colors.danger }]}>
+              Clear Local History
+            </Text>
+            <Text style={styles.supportHint}>
+              Remove saved rooms and receipts from this device
+            </Text>
+          </View>
+        </Pressable>
+      </Card>
+
       <Text style={styles.sectionTitle}>Support</Text>
       <Card style={styles.supportCard}>
         <Pressable
@@ -160,6 +190,28 @@ export default function ProfileScreen() {
           onPress={() => void signOut()}
         />
       </View>
+
+      <ConfirmModal
+        visible={confirmClearOpen}
+        title="Clear All History?"
+        message="This will remove all saved split rooms and receipts from this device. You can always rejoin active rooms using their code."
+        confirmLabel="Clear All"
+        variant="danger"
+        loading={clearingHistory}
+        onCancel={() => setConfirmClearOpen(false)}
+        onConfirm={async () => {
+          setClearingHistory(true);
+          try {
+            await clearAllRoomsMutation.mutateAsync();
+            toast.success("History cleared from device");
+            setConfirmClearOpen(false);
+          } catch {
+            toast.error("Failed to clear history");
+          } finally {
+            setClearingHistory(false);
+          }
+        }}
+      />
 
       <SupportSheet
         visible={supportOpen}
@@ -283,6 +335,29 @@ const styles = StyleSheet.create({
   },
   supportCard: {
     paddingVertical: spacing.md,
+  },
+  clearRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    ...(Platform.OS === "web"
+      ? ({ cursor: "pointer" } as const)
+      : null),
+  },
+  clearRowPressed: {
+    opacity: 0.8,
+  },
+  clearIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   supportRow: {
     flexDirection: "row",

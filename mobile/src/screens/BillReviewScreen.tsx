@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useQueryClient } from "@tanstack/react-query";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   AnimatedEllipsis,
@@ -21,16 +22,38 @@ import {
 } from "../api/bills";
 import { getBillDisplayTotal } from "../lib/billTotals";
 import { saveReceipt, saveRoom } from "../lib/history";
+import { BILLS_QUERY_KEY } from "../hooks/useBillsQuery";
+import { ROOMS_QUERY_KEY } from "../hooks/useRoomsQuery";
 import { colors, fontSize, radius, spacing, typography } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import { useAuth } from "../contexts/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = NativeStackScreenProps<RootStackParamList, "BillReview">;
+
+function getDisplayErrorMessage(rawMsg?: string | null): string {
+  if (!rawMsg) return "We couldn't read the receipt clearly. Please try again or take a clearer photo.";
+  try {
+    const parsed = JSON.parse(rawMsg);
+    if (Array.isArray(parsed)) {
+      return "Some items or prices on the receipt could not be recognized. Please retry or scan again.";
+    }
+    if (parsed && typeof parsed.message === "string") {
+      return parsed.message;
+    }
+  } catch {
+    // not JSON
+  }
+  if (rawMsg.includes("invalid_type") || rawMsg.includes("Expected number") || rawMsg.includes("[{")) {
+    return "Some items or prices on the receipt could not be recognized. Please retry or scan again.";
+  }
+  return rawMsg;
+}
 
 async function persistReceiptFromBill(bill: Bill, roomCode?: string, imageUri?: string) {
   await saveReceipt({
     billId: bill.id,
-    restaurantName: bill.restaurantName,
+    restaurantName: bill.restaurantName?.trim() || "Receipt",
     total: getBillDisplayTotal(bill),
     roomCode,
     imageUri,
@@ -40,6 +63,7 @@ async function persistReceiptFromBill(bill: Bill, roomCode?: string, imageUri?: 
 export default function BillReviewScreen({ navigation, route }: Props) {
   const { billId, focusSplit, imageUri } = route.params;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [bill, setBill] = useState<Bill | null>(null);
   const [status, setStatus] = useState<Bill["status"]>("processing");
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +74,9 @@ export default function BillReviewScreen({ navigation, route }: Props) {
     async (next: Bill) => {
       setBill(next);
       await persistReceiptFromBill(next, roomCode, imageUri);
+      void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
     },
-    [roomCode, imageUri]
+    [roomCode, imageUri, queryClient]
   );
 
   const loadBill = useCallback(async () => {
@@ -59,7 +84,11 @@ export default function BillReviewScreen({ navigation, route }: Props) {
     setBill(data);
     setStatus(data.status);
     setError(data.errorMessage ?? null);
-  }, [billId]);
+    if (data.status === "parsed") {
+      await persistReceiptFromBill(data, undefined, imageUri);
+      void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
+    }
+  }, [billId, imageUri, queryClient]);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,28 +167,32 @@ export default function BillReviewScreen({ navigation, route }: Props) {
           We're reading the receipt and itemizing everything. This only takes a
           few seconds.
         </Text>
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {error && <Text style={styles.errorText}>{getDisplayErrorMessage(error)}</Text>}
       </ScreenContainer>
     );
   }
 
   if (status === "failed" || bill?.status === "failed") {
+    const displayMsg = getDisplayErrorMessage(error || bill?.errorMessage);
     return (
       <ScreenContainer center>
+        <View style={styles.failedCircle}>
+          <Ionicons name="alert-circle-outline" size={44} color={colors.danger} />
+        </View>
         <Text style={[typography.heading, styles.centerTitle]}>
-          Processing failed
+          Couldn't Read Receipt
         </Text>
         <Text style={[typography.body, styles.centerBody]}>
-          {error || bill?.errorMessage || "Something went wrong while reading the bill."}
+          {displayMsg}
         </Text>
         <Button
-          label="Retry"
+          label="Try Again"
           loading={retrying}
           disabled={retrying}
           onPress={handleRetry}
           style={styles.centerButton}
         />
-        <Button label="Scan another" variant="ghost" onPress={() => navigation.navigate("Main")} />
+        <Button label="Scan Another Receipt" variant="ghost" onPress={() => navigation.navigate("Main")} />
       </ScreenContainer>
     );
   }
@@ -191,6 +224,8 @@ export default function BillReviewScreen({ navigation, route }: Props) {
           role: "host",
           restaurantName: latest.restaurantName,
         });
+        void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
+        void queryClient.invalidateQueries({ queryKey: ROOMS_QUERY_KEY });
         navigation.replace("Room", { code });
       }}
     />
@@ -208,6 +243,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xl,
+  },
+  failedCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.lg,
   },
   centerTitle: {
     textAlign: "center",

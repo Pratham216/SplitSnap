@@ -299,14 +299,15 @@ export default function RoomScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xxxl,
+    gap: spacing.lg,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing.md,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   headerText: {
     flex: 1,
@@ -346,7 +347,6 @@ const styles = StyleSheet.create({
   inviteCard: {
     alignItems: "center",
     gap: spacing.md,
-    marginBottom: spacing.lg,
   },
   sectionTitle: {
     color: colors.textPrimary,
@@ -358,19 +358,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     textAlign: "center",
+    paddingHorizontal: spacing.xs,
   },
   participantList: {
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    gap: spacing.sm + 2,
+    marginTop: spacing.xs,
   },
   participantRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   participantName: {
     flex: 1,
@@ -415,12 +416,12 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: fontSize.sm,
     textAlign: "center",
-    marginVertical: spacing.sm,
+    marginVertical: spacing.xs,
   },
   footerActions: {
     flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xl,
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
   footerButton: {
     flex: 1,

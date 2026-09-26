@@ -347,8 +347,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.md,
@@ -372,7 +373,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
+    minHeight: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -398,11 +400,11 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: "row",
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    borderLeftWidth: 2,
+    borderLeftWidth: 3,
     borderLeftColor: "transparent",
     alignItems: "center",
   },
@@ -414,10 +416,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
     borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
@@ -428,19 +430,19 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: colors.background,
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 14,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 15,
   },
   itemBody: {
     flex: 1,
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
   },
   itemTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: spacing.md,
-    alignItems: "flex-start",
+    alignItems: "center",
   },
   itemNameWrap: {
     flex: 1,
@@ -448,7 +450,7 @@ const styles = StyleSheet.create({
   },
   itemName: {
     color: colors.textPrimary,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontWeight: "500",
   },
   itemQtyPrefix: {
@@ -459,7 +461,8 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
+    fontWeight: "600",
     flexShrink: 0,
   },
   badges: {
@@ -536,7 +539,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successMuted,
     borderTopWidth: 1,
     borderTopColor: colors.successBorder,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     gap: spacing.xs,
   },
   shareTop: {
@@ -547,17 +551,18 @@ const styles = StyleSheet.create({
   shareLabel: {
     color: colors.success,
     fontSize: fontSize.xs,
-    fontWeight: "600",
+    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   shareValue: {
     color: colors.success,
     fontSize: fontSize.xxl,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   shareMeta: {
-    color: colors.textPrimary,
+    color: colors.textSecondary,
     fontSize: fontSize.xs,
+    marginTop: 2,
   },
 });

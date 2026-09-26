@@ -36,12 +36,37 @@ export default function RoomCard({ room, onOpen, onRemove }: RoomCardProps) {
           </View>
 
           <View style={styles.titleInfo}>
-            <Text style={styles.restaurant} numberOfLines={1}>
-              {room.restaurantName || "Bill Split"}
-            </Text>
-            <Text style={styles.dateTimeText}>
-              {formatDateTime(room.savedAt)}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.restaurant} numberOfLines={1}>
+                {room.restaurantName || "Bill Split"}
+              </Text>
+              <View style={styles.codeBadge}>
+                <Text style={styles.codeBadgeText}>#{room.code}</Text>
+              </View>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Text style={styles.dateTimeText}>
+                {formatDateTime(room.savedAt)}
+              </Text>
+              <View
+                style={[
+                  styles.roleBadge,
+                  room.role === "host" ? styles.hostBadge : styles.guestBadge,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleBadgeText,
+                    room.role === "host"
+                      ? styles.hostBadgeText
+                      : styles.guestBadgeText,
+                  ]}
+                >
+                  {room.role === "host" ? "Host" : "Joined"}
+                </Text>
+              </View>
+            </View>
           </View>
         </Pressable>
 
@@ -118,18 +143,68 @@ const styles = StyleSheet.create({
   },
   titleInfo: {
     flex: 1,
-    gap: 3,
+    gap: 4,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+    flexWrap: "wrap",
   },
   restaurant: {
     color: colors.textPrimary,
-    fontSize: fontSize.md + 1,
+    fontSize: fontSize.md,
     fontWeight: "700",
     letterSpacing: -0.2,
+    flexShrink: 1,
+  },
+  codeBadge: {
+    backgroundColor: colors.goldMuted,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+    borderRadius: radius.sm - 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  codeBadgeText: {
+    color: colors.gold,
+    fontSize: 11,
+    fontFamily: "monospace",
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   dateTimeText: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     letterSpacing: 0.2,
+  },
+  roleBadge: {
+    borderRadius: radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  hostBadge: {
+    backgroundColor: "rgba(251, 191, 36, 0.12)",
+  },
+  guestBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  hostBadgeText: {
+    color: colors.goldLight,
+  },
+  guestBadgeText: {
+    color: colors.textMuted,
   },
   removeBtn: {
     width: 34,

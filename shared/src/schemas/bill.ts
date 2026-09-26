@@ -1,30 +1,52 @@
 import { z } from "zod";
 
+const nullableNumber = (defaultValue?: number) => {
+  if (defaultValue !== undefined) {
+    return z.preprocess(
+      (val) => (val === null || val === undefined ? defaultValue : val),
+      z.number().nonnegative().default(defaultValue)
+    );
+  }
+  return z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.number().nonnegative().optional()
+  );
+};
+
 export const BillItemSchema = z.object({
   name: z.string().min(1),
   price: z.number().nonnegative(),
-  quantity: z.number().positive().default(1),
-  unitPrice: z.number().nonnegative().optional(),
+  quantity: z.preprocess(
+    (val) => (val === null || val === undefined ? 1 : val),
+    z.number().positive().default(1)
+  ),
+  unitPrice: nullableNumber(),
 });
 
 export const ParsedBillSchema = z.object({
-  restaurantName: z.string().optional().default(""),
-  billDate: z.string().optional().default(""),
+  restaurantName: z.preprocess(
+    (val) => (val === null || val === undefined ? "" : String(val)),
+    z.string().optional().default("")
+  ),
+  billDate: z.preprocess(
+    (val) => (val === null || val === undefined ? "" : String(val)),
+    z.string().optional().default("")
+  ),
   items: z.array(BillItemSchema).default([]),
-  subtotal: z.number().nonnegative().optional(),
-  tax: z.number().nonnegative().default(0),
-  serviceCharge: z.number().nonnegative().default(0),
-  cgst: z.number().nonnegative().optional().default(0),
-  sgst: z.number().nonnegative().optional().default(0),
-  vat: z.number().nonnegative().optional().default(0),
-  otherTax: z.number().nonnegative().optional().default(0),
-  discount: z.number().nonnegative().optional().default(0),
-  tip: z.number().nonnegative().optional().default(0),
-  grandTotal: z.number().nonnegative().optional(),
-  receiptSubtotal: z.number().nonnegative().optional(),
-  calculatedItemSubtotal: z.number().nonnegative().optional(),
-  printedBillTotal: z.number().nonnegative().optional(),
-  roundedPayableTotal: z.number().nonnegative().optional(),
+  subtotal: nullableNumber(),
+  tax: nullableNumber(0),
+  serviceCharge: nullableNumber(0),
+  cgst: nullableNumber(0),
+  sgst: nullableNumber(0),
+  vat: nullableNumber(0),
+  otherTax: nullableNumber(0),
+  discount: nullableNumber(0),
+  tip: nullableNumber(0),
+  grandTotal: nullableNumber(),
+  receiptSubtotal: nullableNumber(),
+  calculatedItemSubtotal: nullableNumber(),
+  printedBillTotal: nullableNumber(),
+  roundedPayableTotal: nullableNumber(),
   isItemSubtotalValid: z.boolean().optional().default(true),
   requiresVerification: z.boolean().optional().default(false),
   validationWarnings: z.array(z.string()).optional().default([]),

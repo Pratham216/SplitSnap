@@ -10,7 +10,7 @@ import {
   getMyShare,
   getParticipantShare,
 } from "../../lib/payments";
-import { colors, fontSize, spacing } from "../../theme";
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface PaymentPanelProps {
   room: Room;
@@ -178,7 +178,7 @@ export default function PaymentPanel({
 
 const styles = StyleSheet.create({
   card: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   title: {
     color: colors.textPrimary,
@@ -186,20 +186,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   guestList: {
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
+    marginTop: spacing.xs,
   },
   guestRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
   guestName: {
     color: colors.textPrimary,
     fontSize: fontSize.sm,
+    fontWeight: "500",
   },
   guestMeta: {
     flexDirection: "row",
@@ -246,16 +249,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.sm,
     textAlign: "center",
+    paddingVertical: spacing.sm,
   },
   payCard: {
     backgroundColor: colors.successMuted,
     borderColor: colors.successBorder,
-    gap: spacing.md,
+    gap: spacing.lg,
+    padding: spacing.xl,
   },
   oweRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: spacing.xs,
   },
   oweLabel: {
     color: colors.textPrimary,
@@ -273,10 +279,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   payActions: {
-    gap: spacing.sm,
+    gap: spacing.md,
+    marginTop: spacing.xs,
   },
   paidMessage: {
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.goldBorder,
     backgroundColor: colors.goldMuted,

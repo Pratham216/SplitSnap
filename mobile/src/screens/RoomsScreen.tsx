@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ConfirmModal,
   EmptyState,
@@ -17,11 +20,12 @@ import {
 } from "../components";
 import { useToast } from "../contexts/ToastContext";
 import {
+  useClearAllRoomsMutation,
   useRecentRoomsQuery,
   useRemoveRoomMutation,
 } from "../hooks/useRoomsQuery";
 import type { RoomEntry } from "../lib/history";
-import { colors, spacing } from "../theme";
+import { colors, fontSize, radius, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
 /**
@@ -33,6 +37,7 @@ export default function RoomsScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toast = useToast();
   const [roomToDelete, setRoomToDelete] = useState<RoomEntry | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   const {
     data: rooms = [],
@@ -41,7 +46,14 @@ export default function RoomsScreen() {
     refetch,
   } = useRecentRoomsQuery();
 
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch])
+  );
+
   const removeMutation = useRemoveRoomMutation();
+  const clearAllMutation = useClearAllRoomsMutation();
 
   const handleConfirmRemove = async () => {
     if (!roomToDelete) return;
@@ -55,6 +67,16 @@ export default function RoomsScreen() {
       );
     } catch {
       toast.error("Could not remove room");
+    }
+  };
+
+  const handleConfirmClearAll = async () => {
+    try {
+      await clearAllMutation.mutateAsync();
+      setConfirmClearAll(false);
+      toast.success("All rooms cleared from this device");
+    } catch {
+      toast.error("Could not clear rooms");
     }
   };
 
@@ -96,6 +118,23 @@ export default function RoomsScreen() {
           }
           contentContainerStyle={styles.list}
         >
+          <View style={styles.topActionsRow}>
+            <Text style={styles.roomCountText}>
+              {rooms.length} {rooms.length === 1 ? "room" : "rooms"} in history
+            </Text>
+            <Pressable
+              onPress={() => setConfirmClearAll(true)}
+              style={({ pressed }) => [
+                styles.clearAllBtn,
+                pressed && styles.clearAllBtnPressed,
+              ]}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.clearAllText}>Clear all</Text>
+            </Pressable>
+          </View>
+
           {rooms.map((room) => (
             <RoomCard
               key={room.code}
@@ -121,6 +160,17 @@ export default function RoomsScreen() {
         onCancel={() => setRoomToDelete(null)}
         onConfirm={handleConfirmRemove}
       />
+
+      <ConfirmModal
+        visible={confirmClearAll}
+        title="Clear All Rooms?"
+        message="This will remove all room history from this device. You can always rejoin any room with its 6-character code."
+        confirmLabel="Clear All"
+        variant="danger"
+        loading={clearAllMutation.isPending}
+        onCancel={() => setConfirmClearAll(false)}
+        onConfirm={handleConfirmClearAll}
+      />
     </ScreenContainer>
   );
 }
@@ -137,5 +187,37 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
     paddingBottom: spacing.xxl,
+  },
+  topActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+    paddingBottom: spacing.xs,
+  },
+  roomCountText: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  clearAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  clearAllBtnPressed: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    opacity: 0.8,
+  },
+  clearAllText: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "600",
   },
 });

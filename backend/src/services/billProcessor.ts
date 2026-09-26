@@ -131,8 +131,20 @@ export async function processBill(billId: string): Promise<void> {
     await bill.save();
   } catch (error) {
     bill.status = "failed";
-    bill.errorMessage =
-      error instanceof Error ? error.message : "Bill processing failed";
+    let message = "Bill processing failed";
+    if (error instanceof Error) {
+      try {
+        const parsed = JSON.parse(error.message);
+        if (Array.isArray(parsed)) {
+          message = parsed.map((e) => e.message || "Invalid receipt structure").join(", ");
+        } else {
+          message = error.message;
+        }
+      } catch {
+        message = error.message;
+      }
+    }
+    bill.errorMessage = message;
     await bill.save();
   }
 }

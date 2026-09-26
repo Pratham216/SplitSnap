@@ -95,23 +95,6 @@ export default function Button({
     }, 1050);
   }
 
-  // Periodic ambient glow every 5s for primary and marked CTA buttons
-  useEffect(() => {
-    if (!showShimmer || isDisabled) return;
-
-    const firstTimer = setTimeout(() => {
-      runShimmer();
-    }, 1200);
-
-    const interval = setInterval(() => {
-      runShimmer();
-    }, 5000);
-
-    return () => {
-      clearTimeout(firstTimer);
-      clearInterval(interval);
-    };
-  }, [showShimmer, isDisabled]);
 
   const handlePress = () => {
     runShimmer();

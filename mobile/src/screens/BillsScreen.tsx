@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   BillImageModal,
@@ -24,8 +26,9 @@ import {
   useRecentReceiptsQuery,
   useRemoveReceiptMutation,
 } from "../hooks/useBillsQuery";
+import { formatMoney } from "../lib/formatters";
 import type { ReceiptEntry } from "../lib/history";
-import { colors, spacing } from "../theme";
+import { colors, fontSize, radius, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
 /**
@@ -53,8 +56,24 @@ export default function BillsScreen() {
     refetch,
   } = useRecentReceiptsQuery();
 
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch])
+  );
+
   const removeMutation = useRemoveReceiptMutation();
   const splitMutation = useCreateSplitRoomMutation();
+
+  const totalSpent = useMemo(
+    () => receipts.reduce((acc, r) => acc + (r.total || 0), 0),
+    [receipts]
+  );
+
+  const activeSplitsCount = useMemo(
+    () => receipts.filter((r) => Boolean(r.roomCode)).length,
+    [receipts]
+  );
 
   async function handleSplit(receipt: ReceiptEntry) {
     if (receipt.roomCode) {
@@ -105,7 +124,11 @@ export default function BillsScreen() {
       <MobileHeader
         title="Your Bills"
         goldTitle
-        subtitle="Capture Your Receipts"
+        subtitle="Capture and split receipts instantly"
+        onAction={openScan}
+        actionIcon="camera"
+        actionLabel="Scan receipt"
+        actionTone="emerald"
       />
 
       {isLoading ? (
@@ -133,6 +156,26 @@ export default function BillsScreen() {
           }
           contentContainerStyle={styles.list}
         >
+          <View style={styles.statsBanner}>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Total Tracked</Text>
+              <Text style={styles.statValue}>{formatMoney(totalSpent)}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Receipts</Text>
+              <Text style={styles.statValueSecondary}>{receipts.length}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Active Splits</Text>
+              <View style={styles.splitStatRow}>
+                {activeSplitsCount > 0 ? <View style={styles.activeDot} /> : null}
+                <Text style={styles.statValueGold}>{activeSplitsCount}</Text>
+              </View>
+            </View>
+          </View>
+
           {receipts.map((receipt) => (
             <ReceiptCard
               key={receipt.billId}
@@ -194,7 +237,67 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   list: {
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  statsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+    ...(Platform.OS === "web"
+      ? ({
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)",
+        } as const)
+      : {}),
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.borderStrong,
+  },
+  statLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    fontWeight: "600",
+  },
+  statValue: {
+    color: colors.success,
+    fontSize: fontSize.md,
+    fontWeight: "800",
+  },
+  statValueSecondary: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+  },
+  statValueGold: {
+    color: colors.gold,
+    fontSize: fontSize.md,
+    fontWeight: "700",
+  },
+  splitStatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
   },
 });
