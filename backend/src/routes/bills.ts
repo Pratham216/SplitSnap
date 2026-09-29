@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -113,20 +114,32 @@ router.get("/recent", optionalAuth, async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const bill = await Bill.findById(req.params.id);
-  if (!bill) {
-    res.status(404).json({ error: "Bill not found" });
-    return;
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(400).json({ error: "Invalid bill ID" });
+      return;
+    }
+    const bill = await Bill.findById(req.params.id);
+    if (!bill) {
+      res.status(404).json({ error: "Bill not found" });
+      return;
+    }
+    const room = await Room.findOne({ billId: bill._id }).sort({ createdAt: -1 });
+    res.json({
+      ...serializeBill(bill),
+      roomCode: room?.code,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch bill" });
   }
-  const room = await Room.findOne({ billId: bill._id }).sort({ createdAt: -1 });
-  res.json({
-    ...serializeBill(bill),
-    roomCode: room?.code,
-  });
 });
 
 router.get("/:id/image", async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(400).json({ error: "Invalid bill ID" });
+      return;
+    }
     const bill = await Bill.findById(req.params.id);
     if (!bill) {
       res.status(404).json({ error: "Bill not found" });
@@ -152,6 +165,11 @@ router.get("/:id/image", async (req, res) => {
 });
 
 router.get("/:id/status", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id).select(
     "status errorMessage updatedAt"
   );
@@ -164,9 +182,17 @@ router.get("/:id/status", async (req, res) => {
     errorMessage: bill.errorMessage,
     updatedAt: bill.updatedAt,
   });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch bill status" });
+  }
 });
 
 router.patch("/:id", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -193,9 +219,17 @@ router.patch("/:id", async (req, res) => {
 
   await bill.save();
   res.json(serializeBill(bill));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update bill" });
+  }
 });
 
 router.post("/:id/items", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -215,9 +249,17 @@ router.post("/:id/items", async (req, res) => {
   });
   await bill.save();
   res.json(serializeBill(bill));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to add item" });
+  }
 });
 
 router.patch("/:id/items/:itemId", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -237,9 +279,17 @@ router.patch("/:id/items/:itemId", async (req, res) => {
 
   await bill.save();
   res.json(serializeBill(bill));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update item" });
+  }
 });
 
 router.delete("/:id/items/:itemId", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -255,9 +305,17 @@ router.delete("/:id/items/:itemId", async (req, res) => {
   item.deleteOne();
   await bill.save();
   res.json(serializeBill(bill));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete item" });
+  }
 });
 
 router.post("/:id/retry", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -280,9 +338,17 @@ router.post("/:id/retry", async (req, res) => {
   );
 
   res.json({ id: bill._id.toString(), status: bill.status });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retry bill processing" });
+  }
 });
 
 router.delete("/:id", async (req, res) => {
+  try {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({ error: "Invalid bill ID" });
+    return;
+  }
   const bill = await Bill.findByIdAndDelete(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
@@ -293,6 +359,9 @@ router.delete("/:id", async (req, res) => {
     await deleteTempFile(bill.tempFilePath).catch(() => {});
   }
   res.json({ success: true, id: req.params.id });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete bill" });
+  }
 });
 
 export default router;
