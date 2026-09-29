@@ -12,7 +12,7 @@ export function runReconciliationTests() {
   console.log("RUNNING RECEIPT RECONCILIATION TEST SUITE");
   console.log("=========================================");
 
-  // TEST 1: Full 10-item receipt regression test
+  // TEST 1: Full 10-item receipt regression test with dynamic taxes[]
   console.log("\n[TEST 1] Exact 10-Item Receipt Validation");
   const fullReceiptPayload = ParsedBillSchema.parse({
     restaurantName: "RESTAURANT & BAR",
@@ -31,10 +31,11 @@ export function runReconciliationTests() {
     ],
     receiptSubtotal: 8086,
     subtotal: 8086,
-    cgst: 114.65,
-    sgst: 114.65,
-    vat: 350,
-    tax: 579.3,
+    taxes: [
+      { name: "CGST", rate: 2.5, amount: 114.65 },
+      { name: "SGST", rate: 2.5, amount: 114.65 },
+      { name: "VAT", rate: 10, amount: 350 },
+    ],
     serviceCharge: 808.6,
     printedBillTotal: 9473.0,
     roundedPayableTotal: 9474.0,
@@ -77,10 +78,11 @@ export function runReconciliationTests() {
     ],
     receiptSubtotal: 8086,
     subtotal: 8086,
-    cgst: 114.65,
-    sgst: 114.65,
-    vat: 350,
-    tax: 579.3,
+    taxes: [
+      { name: "CGST", rate: 2.5, amount: 114.65 },
+      { name: "SGST", rate: 2.5, amount: 114.65 },
+      { name: "VAT", rate: 10, amount: 350 },
+    ],
     serviceCharge: 808.6,
     grandTotal: 9473.9,
   });
@@ -122,7 +124,7 @@ export function runReconciliationTests() {
     ],
     receiptSubtotal: 500,
     subtotal: 500,
-    tax: 0,
+    taxes: [],
     serviceCharge: 0,
   });
   const recon4 = reconcileBill(qRateMismatchPayload);
@@ -143,8 +145,8 @@ export function runReconciliationTests() {
   console.log("  ✅ TEST 5 PASSED!");
 
   // TEST 6: Tax & Charge Breakdown Validation
-  console.log("\n[TEST 6] Tax / Charge Breakdown Validation");
-  console.log(`  · CGST: ₹114.65, SGST: ₹114.65, VAT: ₹350.00`);
+  console.log("\n[TEST 6] Dynamic Taxes Array Breakdown Validation");
+  console.log(`  · Taxes count: ${recon1.taxes.length}`);
   console.log(`  · Total tax reconciled: ₹${recon1.totalTax.toFixed(2)}`);
   console.log(`  · Service charge reconciled: ₹${recon1.serviceCharge.toFixed(2)}`);
   assert(recon1.totalTax === 579.3, "Total tax must equal 114.65 + 114.65 + 350.00 = 579.30");
@@ -186,15 +188,15 @@ export function runReconciliationTests() {
   const testBill = ParsedBillSchema.parse({
     restaurantName: "TYPE TEST",
     items: [{ name: "ITEM", price: 100, quantity: 1, unitPrice: 100 }],
-    tax: 5,
+    taxes: [
+      { name: "CGST", rate: 2.5, amount: 2.5 },
+      { name: "SGST", rate: 2.5, amount: 2.5 },
+    ],
     serviceCharge: 10,
-    cgst: 2.5,
-    sgst: 2.5,
-    vat: 0,
     requiresVerification: false,
     isItemSubtotalValid: true,
   });
-  assert(typeof testBill.cgst === "number", "cgst must be typed as number");
+  assert(testBill.taxes.length === 2, "taxes array must contain 2 items");
   assert(typeof testBill.requiresVerification === "boolean", "requiresVerification must be typed as boolean");
   console.log("  · All schema fields match Zod & TypeScript type definitions");
   console.log("  ✅ TEST 9 PASSED!");

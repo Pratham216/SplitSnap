@@ -1,9 +1,10 @@
-import type { ParsedBill } from "@zaptab/shared";
+import type { ParsedBill, TaxBreakdown } from "@zaptab/shared";
 
 export interface ReconciliationResult {
   calculatedItemSubtotal: number;
   receiptSubtotal: number;
   totalTax: number;
+  taxes: TaxBreakdown[];
   serviceCharge: number;
   calculatedGrandTotal: number;
   printedBillTotal?: number;
@@ -34,13 +35,23 @@ export function reconcileBill(parsed: ParsedBill): ReconciliationResult {
   const receiptSubtotalInput = parsed.receiptSubtotal ?? parsed.subtotal ?? 0;
   const receiptSubtotalPaise = toPaise(receiptSubtotalInput);
 
+  // 2. Calculate total tax by summing taxes[] array
+  const taxes = parsed.taxes ?? [];
+  const totalTaxPaise = taxes.reduce((sum, t) => sum + toPaise(t.amount), 0);
+
+  // Detect if item line totals are tax-inclusive
+  const isTaxInclusive =
+    totalTaxPaise > 0 &&
+    receiptSubtotalPaise > 0 &&
+    Math.abs(calculatedItemSubtotalPaise - (receiptSubtotalPaise + totalTaxPaise)) <= 200;
+
   let isItemSubtotalValid = true;
   let requiresVerification = false;
 
-  // 2. Validate extracted items total vs receipt subtotal
+  // 3. Validate extracted items total vs receipt subtotal
   if (receiptSubtotalPaise > 0) {
     const diffPaise = receiptSubtotalPaise - calculatedItemSubtotalPaise;
-    if (diffPaise !== 0) {
+    if (diffPaise !== 0 && !isTaxInclusive) {
       isItemSubtotalValid = false;
       requiresVerification = true;
       const diffFormatted = (Math.abs(diffPaise) / 100).toFixed(2);
@@ -59,7 +70,7 @@ export function reconcileBill(parsed: ParsedBill): ReconciliationResult {
     }
   }
 
-  // 3. Validate Quantity x Unit Price where unitPrice exists
+  // 4. Validate Quantity x Unit Price where unitPrice exists
   for (const item of parsed.items) {
     if (typeof item.unitPrice === "number" && item.unitPrice > 0 && item.quantity > 0) {
       const expectedLinePaise = Math.round(item.quantity * item.unitPrice * 100);
@@ -76,25 +87,17 @@ export function reconcileBill(parsed: ParsedBill): ReconciliationResult {
     }
   }
 
-  // 4. Calculate total tax from individual charges if available
-  const individualTaxesPaise =
-    toPaise(parsed.cgst) +
-    toPaise(parsed.sgst) +
-    toPaise(parsed.vat) +
-    toPaise(parsed.otherTax);
-
-  const totalTaxPaise =
-    individualTaxesPaise > 0 ? individualTaxesPaise : toPaise(parsed.tax);
-
   const serviceChargePaise = toPaise(parsed.serviceCharge);
   const discountPaise = toPaise(parsed.discount);
   const tipPaise = toPaise(parsed.tip);
 
-  const baseSubtotalPaise =
-    receiptSubtotalPaise > 0 ? receiptSubtotalPaise : calculatedItemSubtotalPaise;
+  const baseSubtotalPaise = isTaxInclusive
+    ? calculatedItemSubtotalPaise
+    : (receiptSubtotalPaise > 0 ? receiptSubtotalPaise : calculatedItemSubtotalPaise);
 
-  const calculatedGrandTotalPaise =
-    baseSubtotalPaise + totalTaxPaise + serviceChargePaise + tipPaise - discountPaise;
+  const calculatedGrandTotalPaise = isTaxInclusive
+    ? baseSubtotalPaise + serviceChargePaise + tipPaise - discountPaise
+    : baseSubtotalPaise + totalTaxPaise + serviceChargePaise + tipPaise - discountPaise;
 
   // 5. Compare with printed & rounded totals
   const printedTotalInput = parsed.printedBillTotal ?? parsed.grandTotal;
@@ -120,6 +123,7 @@ export function reconcileBill(parsed: ParsedBill): ReconciliationResult {
     calculatedItemSubtotal: fromPaise(calculatedItemSubtotalPaise),
     receiptSubtotal: fromPaise(receiptSubtotalPaise),
     totalTax: fromPaise(totalTaxPaise),
+    taxes,
     serviceCharge: fromPaise(serviceChargePaise),
     calculatedGrandTotal: fromPaise(calculatedGrandTotalPaise),
     printedBillTotal: printedTotalInput !== undefined ? fromPaise(printedTotalPaise) : undefined,

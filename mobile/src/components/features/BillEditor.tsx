@@ -3,11 +3,13 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 import ScreenContainer from "../layout/ScreenContainer";
 import Button from "../ui/Button";
 import GradientGoldText from "../ui/GradientGoldText";
+import type { TaxBreakdown } from "@zaptab/shared";
 import { deleteBillItem, type Bill, type BillItem } from "../../api/bills";
 import { createRoom } from "../../api/rooms";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import {
   applyItemFieldUpdate,
+  getTotalTaxFromBill,
   recalcBillFromItems,
   recalcGrandTotal,
   sumItemPrices,
@@ -164,11 +166,20 @@ export default function BillEditor({
     fields: Partial<
       Pick<
         Bill,
-        "restaurantName" | "billDate" | "tax" | "serviceCharge" | "subtotal" | "grandTotal"
+        "restaurantName" | "billDate" | "serviceCharge" | "subtotal" | "grandTotal"
       >
     >
   ) {
-    updateDraft((current) => recalcGrandTotal({ ...current, ...fields }));
+    updateDraft((current) =>
+      recalcGrandTotal({ ...current, ...fields, isManuallyModified: true })
+    );
+  }
+
+  function handleTaxesChange(newTaxes: TaxBreakdown[]) {
+    updateDraft((current) => {
+      const next = { ...current, taxes: newTaxes, isManuallyModified: true };
+      return recalcGrandTotal(next);
+    });
   }
 
   function handleAddItem() {
@@ -177,6 +188,7 @@ export default function BillEditor({
     updateDraft((current) =>
       recalcBillFromItems({
         ...current,
+        isManuallyModified: true,
         items: [
           ...current.items,
           { id: newItemId, name: "", price: 0, quantity: 1 },
@@ -192,6 +204,7 @@ export default function BillEditor({
       updateDraft((current) =>
         recalcBillFromItems({
           ...current,
+          isManuallyModified: true,
           items: current.items.filter((item) => item.id !== itemId),
         })
       );
@@ -205,6 +218,7 @@ export default function BillEditor({
         const temps = current.items.filter((item) => isTempItemId(item.id));
         const next = recalcBillFromItems({
           ...serverBill,
+          isManuallyModified: true,
           items: [...serverBill.items, ...temps],
         });
         notifyBillChange(next);
@@ -218,8 +232,9 @@ export default function BillEditor({
 
   const itemsTotal = sumItemPrices(draft.items);
   const displaySubtotal = draft.subtotal ?? itemsTotal;
+  const totalTax = getTotalTaxFromBill(draft);
   const displayGrandTotal =
-    draft.grandTotal ?? displaySubtotal + draft.tax + draft.serviceCharge;
+    draft.grandTotal ?? displaySubtotal + totalTax + draft.serviceCharge;
 
   async function handleCreateRoom() {
     if (!hostName.trim()) {
@@ -286,15 +301,17 @@ export default function BillEditor({
       />
 
       <BillTotalsSection
-        tax={draft.tax}
+        taxes={draft.taxes ?? []}
         serviceCharge={draft.serviceCharge}
         subtotal={displaySubtotal}
         grandTotal={displayGrandTotal}
+        isManuallyModified={draft.isManuallyModified}
+        onTaxesChange={handleTaxesChange}
         onFieldChange={handleBillFieldChange}
       />
 
       <BillHostSection
-        itemsTotal={itemsTotal}
+        grandTotal={displayGrandTotal}
         hostName={hostName}
         onHostNameChange={setHostName}
         hostUpiId={hostUpiId}

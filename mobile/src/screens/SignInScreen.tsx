@@ -29,7 +29,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   hero: {
+    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
     gap: spacing.sm,
     marginBottom: spacing.lg,
     maxWidth: 320,

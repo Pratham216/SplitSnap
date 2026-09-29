@@ -1,10 +1,12 @@
 import { Platform, StyleSheet, Text, View, type TextStyle } from "react-native";
 import Svg, {
   Defs,
+  G,
   LinearGradient,
+  Mask,
+  Rect,
   Stop,
   Text as SvgText,
-  TSpan,
 } from "react-native-svg";
 
 type WordmarkSize = "sm" | "md" | "lg" | "xl";
@@ -87,7 +89,7 @@ export default function ZapTabWordmark({
     <View
       accessibilityLabel="ZapTab"
       accessibilityRole="text"
-      style={style}
+      style={[{ alignItems: "center", justifyContent: "center" }, style]}
     >
       <NativeGradientWordmark fontSize={fontSize} />
     </View>
@@ -96,7 +98,7 @@ export default function ZapTabWordmark({
 
 function NativeGradientWordmark({ fontSize }: { fontSize: number }) {
   const height = Math.ceil(fontSize * 1.3);
-  const width = Math.ceil(fontSize * 5.1);
+  const width = Math.ceil(fontSize * 4.4);
   const baseline = fontSize * 1.02;
   const fontFamily = Platform.select({
     ios: "System",
@@ -125,32 +127,41 @@ function NativeGradientWordmark({ fontSize }: { fontSize: number }) {
             />
           ))}
         </LinearGradient>
+        <Mask id="zapTabMask">
+          <SvgText
+            x={width / 2}
+            y={baseline}
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontWeight="800"
+            fontFamily={fontFamily}
+            fill="#ffffff"
+            letterSpacing={-0.5}
+          >
+            ZapTab
+          </SvgText>
+        </Mask>
       </Defs>
 
+      {/* Drop shadow */}
       <SvgText
-        x={1}
+        x={width / 2}
         y={baseline + 2}
+        textAnchor="middle"
         fontSize={fontSize}
         fontWeight="800"
         fontFamily={fontFamily}
-        fill="rgba(0, 0, 0, 0.55)"
+        fill="rgba(0, 0, 0, 0.6)"
         letterSpacing={-0.5}
       >
-        <TSpan>Zap</TSpan>
-        <TSpan>Tab</TSpan>
+        ZapTab
       </SvgText>
 
-      <SvgText
-        x={0}
-        y={baseline}
-        fontSize={fontSize}
-        fontWeight="800"
-        fontFamily={fontFamily}
-        letterSpacing={-0.5}
-      >
-        <TSpan fill="url(#zapTabZap)">Zap</TSpan>
-        <TSpan fill="url(#zapTabTab)">Tab</TSpan>
-      </SvgText>
+      {/* Gradient Masked Wordmark */}
+      <G mask="url(#zapTabMask)">
+        <Rect x="0" y="0" width={width * 0.49} height={height} fill="url(#zapTabZap)" />
+        <Rect x={width * 0.49} y="0" width={width * 0.51} height={height} fill="url(#zapTabTab)" />
+      </G>
     </Svg>
   );
 }
@@ -159,5 +170,6 @@ const styles = StyleSheet.create({
   base: {
     fontWeight: "800",
     letterSpacing: -0.5,
+    textAlign: "center",
   },
 });

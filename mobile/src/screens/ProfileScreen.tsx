@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import * as Linking from "expo-linking";
 import {
   Button,
   Card,
-  ConfirmModal,
   MobileHeader,
   ScreenContainer,
   SupportSheet,
@@ -15,27 +16,111 @@ import {
 import { updateUserUpi } from "../api/users";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { useClearAllRoomsMutation } from "../hooks/useRoomsQuery";
 import { isValidUpiId } from "@zaptab/shared";
+import packageJson from "../../package.json";
 import { colors, fontSize, radius, spacing } from "../theme";
 import type { RootStackParamList } from "../navigation/AppNavigator";
+
+const APP_VERSION =
+  Constants.expoConfig?.version ||
+  (Constants as any).manifest?.version ||
+  packageJson.version ||
+  "1.0.2";
+
+interface ReleaseInfo {
+  tagName: string;
+  version: string;
+  downloadUrl: string;
+  releaseUrl: string;
+  hasUpdate: boolean;
+}
+
+function parseSemver(v: string) {
+  const cleaned = v.replace(/^v/, "").trim();
+  const parts = cleaned.split(".").map((p) => parseInt(p, 10) || 0);
+  return {
+    major: parts[0] || 0,
+    minor: parts[1] || 0,
+    patch: parts[2] || 0,
+  };
+}
+
+function isNewerVersion(latest: string, current: string): boolean {
+  const l = parseSemver(latest);
+  const c = parseSemver(current);
+  if (l.major !== c.major) return l.major > c.major;
+  if (l.minor !== c.minor) return l.minor > c.minor;
+  return l.patch > c.patch;
+}
 
 export default function ProfileScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, completeOnboarding } = useAuth();
   const toast = useToast();
-  const clearAllRoomsMutation = useClearAllRoomsMutation();
   const [supportOpen, setSupportOpen] = useState(false);
-  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [clearingHistory, setClearingHistory] = useState(false);
   const [editingUpi, setEditingUpi] = useState(false);
   const [upiDraft, setUpiDraft] = useState(user?.upiId ?? "");
   const [upiSaving, setUpiSaving] = useState(false);
   const [upiError, setUpiError] = useState<string | null>(null);
 
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [releaseInfo, setReleaseInfo] = useState<ReleaseInfo | null>(null);
+
   const initial = (user?.name || user?.email || "?").slice(0, 1).toUpperCase();
   const supportUser = { name: user?.name, email: user?.email };
+
+  const checkForUpdates = async (manual = false) => {
+    setCheckingUpdate(true);
+    try {
+      const res = await fetch(
+        "https://api.github.com/repos/Pratham216/ZapTab/releases/latest",
+        { headers: { Accept: "application/vnd.github.v3+json" } }
+      );
+      if (!res.ok) {
+        if (manual) toast.error("Could not fetch latest version info");
+        return;
+      }
+      const data = await res.json();
+      const tagName = data.tag_name || "";
+      const apkAsset = data.assets?.find((a: { name: string }) =>
+        a.name.endsWith(".apk")
+      );
+      const downloadUrl =
+        apkAsset?.browser_download_url ||
+        data.html_url ||
+        "https://github.com/Pratham216/ZapTab/releases";
+      const releaseUrl =
+        data.html_url || "https://github.com/Pratham216/ZapTab/releases";
+      const hasUpdate = isNewerVersion(tagName, APP_VERSION);
+
+      const info: ReleaseInfo = {
+        tagName,
+        version: tagName.replace(/^v/, ""),
+        downloadUrl,
+        releaseUrl,
+        hasUpdate,
+      };
+
+      setReleaseInfo(info);
+
+      if (manual) {
+        if (hasUpdate) {
+          toast.info(`New version available: ${tagName}`);
+        } else {
+          toast.success("You are on the latest version!");
+        }
+      }
+    } catch {
+      if (manual) toast.error("Failed to check for updates");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  useEffect(() => {
+    void checkForUpdates(false);
+  }, []);
 
   return (
     <ScreenContainer scroll contentStyle={styles.container} edges={["top"]}>
@@ -52,127 +137,164 @@ export default function ProfileScreen() {
         {user?.email ? <Text style={styles.userEmail}>{user.email}</Text> : null}
       </View>
 
-      <Text style={styles.sectionTitle}>Account</Text>
-      <Card>
-        <Row label="Name" value={user?.name || "—"} />
-        <View style={styles.divider} />
-        <Row label="Email" value={user?.email || "—"} />
-        <View style={styles.divider} />
-        {editingUpi ? (
-          <View style={styles.upiEditRow}>
-            <View style={styles.upiEditField}>
-              <Text style={styles.rowLabel}>UPI ID</Text>
-              <TextInput
-                style={styles.upiInput}
-                value={upiDraft}
-                onChangeText={(v) => { setUpiDraft(v); setUpiError(null); }}
-                placeholder="you@ybl"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                selectionColor={colors.gold}
-                autoFocus
-              />
-              {upiError ? <Text style={styles.upiError}>{upiError}</Text> : null}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <Card>
+          <Row label="Name" value={user?.name || "—"} />
+          <View style={styles.divider} />
+          <Row label="Email" value={user?.email || "—"} />
+          <View style={styles.divider} />
+          {editingUpi ? (
+            <View style={styles.upiEditRow}>
+              <View style={styles.upiEditField}>
+                <Text style={styles.rowLabel}>UPI ID</Text>
+                <TextInput
+                  style={styles.upiInput}
+                  value={upiDraft}
+                  onChangeText={(v) => { setUpiDraft(v); setUpiError(null); }}
+                  placeholder="you@ybl"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  selectionColor={colors.gold}
+                  autoFocus
+                />
+                {upiError ? <Text style={styles.upiError}>{upiError}</Text> : null}
+              </View>
+              <View style={styles.upiEditActions}>
+                <Pressable
+                  onPress={async () => {
+                    const trimmed = upiDraft.trim();
+                    if (trimmed && !isValidUpiId(trimmed)) {
+                      setUpiError("Use format: name@bank (e.g. you@ybl)");
+                      return;
+                    }
+                    setUpiSaving(true);
+                    setUpiError(null);
+                    try {
+                      const updated = await updateUserUpi(trimmed);
+                      completeOnboarding(updated);
+                      setEditingUpi(false);
+                      toast.success("UPI ID updated!");
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : "Failed to save";
+                      setUpiError(msg);
+                      toast.error(msg);
+                    } finally {
+                      setUpiSaving(false);
+                    }
+                  }}
+                  style={styles.upiSaveBtn}
+                  disabled={upiSaving}
+                >
+                  <Ionicons name="checkmark" size={18} color={upiSaving ? colors.textMuted : colors.success} />
+                </Pressable>
+                <Pressable onPress={() => { setEditingUpi(false); setUpiDraft(user?.upiId ?? ""); setUpiError(null); }} style={styles.upiSaveBtn}>
+                  <Ionicons name="close" size={18} color={colors.textMuted} />
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.upiEditActions}>
+          ) : (
+            <View style={styles.upiReadRow}>
+              <Row label="UPI ID" value={user?.upiId || "Not set"} />
               <Pressable
-                onPress={async () => {
-                  const trimmed = upiDraft.trim();
-                  if (trimmed && !isValidUpiId(trimmed)) {
-                    setUpiError("Use format: name@bank (e.g. you@ybl)");
-                    return;
-                  }
-                  setUpiSaving(true);
-                  setUpiError(null);
-                  try {
-                    const updated = await updateUserUpi(trimmed);
-                    completeOnboarding(updated);
-                    setEditingUpi(false);
-                    toast.success("UPI ID updated!");
-                  } catch (err) {
-                    const msg = err instanceof Error ? err.message : "Failed to save";
-                    setUpiError(msg);
-                    toast.error(msg);
-                  } finally {
-                    setUpiSaving(false);
-                  }
-                }}
-                style={styles.upiSaveBtn}
-                disabled={upiSaving}
+                onPress={() => { setUpiDraft(user?.upiId ?? ""); setEditingUpi(true); }}
+                hitSlop={8}
+                style={styles.upiEditBtn}
               >
-                <Ionicons name="checkmark" size={18} color={upiSaving ? colors.textMuted : colors.success} />
-              </Pressable>
-              <Pressable onPress={() => { setEditingUpi(false); setUpiDraft(user?.upiId ?? ""); setUpiError(null); }} style={styles.upiSaveBtn}>
-                <Ionicons name="close" size={18} color={colors.textMuted} />
+                <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
               </Pressable>
             </View>
-          </View>
-        ) : (
-          <View style={styles.upiReadRow}>
-            <Row label="UPI ID" value={user?.upiId || "Not set"} />
-            <Pressable
-              onPress={() => { setUpiDraft(user?.upiId ?? ""); setEditingUpi(true); }}
-              hitSlop={8}
-              style={styles.upiEditBtn}
+          )}
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>App Version & Updates</Text>
+        <Card style={styles.updateCard}>
+          <View style={styles.updateRow}>
+            <View
+              style={[
+                styles.updateIcon,
+                releaseInfo?.hasUpdate && styles.updateIconAvailable,
+              ]}
             >
-              <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
-            </Pressable>
-          </View>
-        )}
-      </Card>
+              <Ionicons
+                name={
+                  releaseInfo?.hasUpdate
+                    ? "arrow-up-circle-outline"
+                    : "checkmark-circle-outline"
+                }
+                size={20}
+                color={releaseInfo?.hasUpdate ? colors.gold : colors.success}
+              />
+            </View>
 
-      <Text style={styles.sectionTitle}>Data & Storage</Text>
-      <Card>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Clear history"
-          onPress={() => setConfirmClearOpen(true)}
-          style={({ pressed }) => [
-            styles.clearRow,
-            pressed && styles.clearRowPressed,
-          ]}
-        >
-          <View style={styles.clearIcon}>
-            <Ionicons name="trash-bin-outline" size={18} color={colors.danger} />
+            <View style={styles.updateCopy}>
+              <Text style={styles.updateTitle}>
+                {releaseInfo?.hasUpdate
+                  ? `Update Available: ${releaseInfo.tagName}`
+                  : `ZapTab v${APP_VERSION}`}
+              </Text>
+              <Text style={styles.updateHint}>
+                {checkingUpdate
+                  ? "Checking GitHub releases..."
+                  : releaseInfo?.hasUpdate
+                  ? "A new version of ZapTab is available for download."
+                  : "You are on the latest version of ZapTab."}
+              </Text>
+            </View>
           </View>
-          <View style={styles.supportCopy}>
-            <Text style={[styles.supportText, { color: colors.danger }]}>
-              Clear Local History
-            </Text>
-            <Text style={styles.supportHint}>
-              Remove saved rooms and receipts from this device
-            </Text>
-          </View>
-        </Pressable>
-      </Card>
 
-      <Text style={styles.sectionTitle}>Support</Text>
-      <Card style={styles.supportCard}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Help and feedback"
-          onPress={() => setSupportOpen(true)}
-          style={({ pressed }) => [
-            styles.supportRow,
-            pressed && styles.supportRowPressed,
-          ]}
-        >
-          <View style={styles.supportIcon}>
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={18}
-              color={colors.onGold}
-            />
+          <View style={styles.updateActionRow}>
+            {releaseInfo?.hasUpdate ? (
+              <Button
+                label={`Download ${releaseInfo.tagName}`}
+                variant="goldOutline"
+                fullWidth
+                onPress={() => void Linking.openURL(releaseInfo.downloadUrl)}
+              />
+            ) : (
+              <Button
+                label={checkingUpdate ? "Checking..." : "Check for Updates"}
+                variant="secondary"
+                fullWidth
+                disabled={checkingUpdate}
+                onPress={() => void checkForUpdates(true)}
+              />
+            )}
           </View>
-          <View style={styles.supportCopy}>
-            <Text style={styles.supportText}>Help & Feedback</Text>
-            <Text style={styles.supportHint}>
-              Send a message to the ZapTab team
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
-      </Card>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <Card style={styles.supportCard}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Help and feedback"
+            onPress={() => setSupportOpen(true)}
+            style={({ pressed }) => [
+              styles.supportRow,
+              pressed && styles.supportRowPressed,
+            ]}
+          >
+            <View style={styles.supportIcon}>
+              <Ionicons
+                name="chatbubble-ellipses"
+                size={18}
+                color={colors.onGold}
+              />
+            </View>
+            <View style={styles.supportCopy}>
+              <Text style={styles.supportText}>Help & Feedback</Text>
+              <Text style={styles.supportHint}>
+                Send a message to the ZapTab team
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        </Card>
+      </View>
 
       <View style={styles.actions}>
         {__DEV__ ? (
@@ -190,28 +312,6 @@ export default function ProfileScreen() {
           onPress={() => void signOut()}
         />
       </View>
-
-      <ConfirmModal
-        visible={confirmClearOpen}
-        title="Clear All History?"
-        message="This will remove all saved split rooms and receipts from this device. You can always rejoin active rooms using their code."
-        confirmLabel="Clear All"
-        variant="danger"
-        loading={clearingHistory}
-        onCancel={() => setConfirmClearOpen(false)}
-        onConfirm={async () => {
-          setClearingHistory(true);
-          try {
-            await clearAllRoomsMutation.mutateAsync();
-            toast.success("History cleared from device");
-            setConfirmClearOpen(false);
-          } catch {
-            toast.error("Failed to clear history");
-          } finally {
-            setClearingHistory(false);
-          }
-        }}
-      />
 
       <SupportSheet
         visible={supportOpen}
@@ -269,11 +369,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.sm,
   },
+  section: {
+    marginBottom: spacing.lg,
+  },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: fontSize.md,
     fontWeight: "600",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   row: {
     gap: spacing.xs,
@@ -333,31 +436,46 @@ const styles = StyleSheet.create({
   upiSaveBtn: {
     padding: spacing.xs,
   },
-  supportCard: {
-    paddingVertical: spacing.md,
+  updateCard: {
+    gap: spacing.md,
   },
-  clearRow: {
+  updateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.xs,
-    ...(Platform.OS === "web"
-      ? ({ cursor: "pointer" } as const)
-      : null),
   },
-  clearRowPressed: {
-    opacity: 0.8,
-  },
-  clearIcon: {
+  updateIcon: {
     width: 36,
     height: 36,
     borderRadius: radius.sm,
-    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.25)",
+    borderColor: "rgba(34, 197, 94, 0.25)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  updateIconAvailable: {
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    borderColor: "rgba(245, 158, 11, 0.25)",
+  },
+  updateCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  updateTitle: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: "600",
+  },
+  updateHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
+  updateActionRow: {
+    marginTop: spacing.xs,
+  },
+  supportCard: {
+    paddingVertical: spacing.md,
   },
   supportRow: {
     flexDirection: "row",
@@ -394,7 +512,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
   actions: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
     gap: spacing.sm,
   },
 });

@@ -6,6 +6,7 @@ import { isVisionSupportedImage, parseBillFromImage } from "./visionParser";
 import { config, isVisionConfigured } from "../config";
 import type { ParsedBill } from "@zaptab/shared";
 import { reconcileBill } from "../utils/reconciliation";
+import { uploadReceiptToCloudinary } from "./cloudinary";
 
 function applyParsedBill(bill: IBill, parsed: ParsedBill, ocrText?: string) {
   const recon = reconcileBill(parsed);
@@ -23,12 +24,8 @@ function applyParsedBill(bill: IBill, parsed: ParsedBill, ocrText?: string) {
     }))
   );
   bill.subtotal = parsed.subtotal ?? recon.receiptSubtotal;
-  bill.tax = parsed.tax ?? recon.totalTax;
+  bill.taxes = parsed.taxes ?? [];
   bill.serviceCharge = parsed.serviceCharge ?? recon.serviceCharge;
-  bill.cgst = parsed.cgst;
-  bill.sgst = parsed.sgst;
-  bill.vat = parsed.vat;
-  bill.otherTax = parsed.otherTax;
   bill.discount = parsed.discount;
   bill.tip = parsed.tip;
   bill.grandTotal = parsed.grandTotal ?? recon.calculatedGrandTotal;
@@ -39,6 +36,7 @@ function applyParsedBill(bill: IBill, parsed: ParsedBill, ocrText?: string) {
   bill.isItemSubtotalValid = recon.isItemSubtotalValid;
   bill.requiresVerification = recon.requiresVerification;
   bill.validationWarnings = recon.validationWarnings;
+  bill.isManuallyModified = parsed.isManuallyModified ?? false;
   if (ocrText !== undefined) bill.ocrText = ocrText;
   bill.status = "parsed";
   bill.errorMessage = undefined;
@@ -125,6 +123,13 @@ export async function processBill(billId: string): Promise<void> {
 
     applyParsedBill(bill, parsed, ocrText || undefined);
 
+    if (!bill.cloudinaryUrl && filePath) {
+      const cUrl = await uploadReceiptToCloudinary(filePath);
+      if (cUrl) {
+        bill.cloudinaryUrl = cUrl;
+      }
+    }
+
     bill.imagePath = filePath;
     bill.tempFilePath = undefined;
     bill.tempFileExpiresAt = undefined;
@@ -151,6 +156,8 @@ export async function processBill(billId: string): Promise<void> {
 
 export function serializeBill(bill: IBill) {
   const calculatedItemsTotal = bill.items.reduce((s, i) => s + i.price, 0);
+  const taxes = bill.taxes ?? [];
+  const totalTax = taxes.reduce((s, t) => s + (t.amount || 0), 0);
 
   return {
     id: bill._id.toString(),
@@ -164,12 +171,13 @@ export function serializeBill(bill: IBill) {
       unitPrice: item.unitPrice,
     })),
     subtotal: bill.subtotal,
-    tax: bill.tax,
+    tax: totalTax,
+    taxes: taxes.map((t) => ({
+      name: t.name,
+      rate: t.rate,
+      amount: t.amount,
+    })),
     serviceCharge: bill.serviceCharge,
-    cgst: bill.cgst ?? 0,
-    sgst: bill.sgst ?? 0,
-    vat: bill.vat ?? 0,
-    otherTax: bill.otherTax ?? 0,
     discount: bill.discount ?? 0,
     tip: bill.tip ?? 0,
     grandTotal: bill.grandTotal,
@@ -180,8 +188,11 @@ export function serializeBill(bill: IBill) {
     isItemSubtotalValid: bill.isItemSubtotalValid ?? true,
     requiresVerification: bill.requiresVerification ?? false,
     validationWarnings: bill.validationWarnings ?? [],
-    hasImage: Boolean(bill.imagePath || bill.tempFilePath),
-    imageUrl: (bill.imagePath || bill.tempFilePath)
+    isManuallyModified: bill.isManuallyModified ?? false,
+    hasImage: Boolean(bill.cloudinaryUrl || bill.imagePath || bill.tempFilePath),
+    imageUrl: bill.cloudinaryUrl
+      ? bill.cloudinaryUrl
+      : (bill.imagePath || bill.tempFilePath)
       ? `/bills/${bill._id.toString()}/image`
       : undefined,
     status: bill.status,

@@ -1,11 +1,15 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { Bill } from "../models/Bill";
-import { ensureTempDir } from "../services/ocr";
+import { Room } from "../models/Room";
+import { ensureTempDir, deleteTempFile } from "../services/ocr";
 import { processBill, serializeBill } from "../services/billProcessor";
 import { config } from "../config";
+
+import { optionalAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -34,7 +38,7 @@ const upload = multer({
   },
 });
 
-router.post("/upload", upload.single("file"), async (req, res) => {
+router.post("/upload", optionalAuth, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "No file uploaded" });
@@ -42,6 +46,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const expiresAt = new Date(Date.now() + config.tempFileTtlMs);
+    const createdByClerkId = req.auth?.type === "user" ? req.auth.clerkId : undefined;
+    const createdByGuestId = req.auth?.guestId;
 
     const bill = await Bill.create({
       status: "processing",
@@ -49,6 +55,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       tempFilePath: req.file.path,
       tempFileExpiresAt: expiresAt,
       items: [],
+      createdByClerkId,
+      createdByGuestId,
     });
 
     processBill(bill._id.toString()).catch((err) =>
@@ -66,13 +74,55 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+router.get("/recent", optionalAuth, async (req, res) => {
+  try {
+    const clerkId = req.auth?.type === "user" ? req.auth.clerkId : null;
+    const guestId = req.auth?.guestId || null;
+
+    if (!clerkId && !guestId) {
+      res.json([]);
+      return;
+    }
+
+    const conditions: any[] = [];
+    if (clerkId) conditions.push({ createdByClerkId: clerkId });
+    if (guestId) conditions.push({ createdByGuestId: guestId });
+
+    const bills = await Bill.find({ $or: conditions })
+      .sort({ createdAt: -1 })
+      .limit(25);
+
+    const billIds = bills.map((b) => b._id);
+    const rooms = await Room.find({ billId: { $in: billIds } }).sort({ createdAt: -1 });
+    const roomMap = new Map<string, string>();
+    for (const r of rooms) {
+      if (!roomMap.has(r.billId.toString())) {
+        roomMap.set(r.billId.toString(), r.code);
+      }
+    }
+
+    const serialized = bills.map((b) => ({
+      ...serializeBill(b),
+      roomCode: roomMap.get(b._id.toString()),
+    }));
+
+    res.json(serialized);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch recent bills" });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   const bill = await Bill.findById(req.params.id);
   if (!bill) {
     res.status(404).json({ error: "Bill not found" });
     return;
   }
-  res.json(serializeBill(bill));
+  const room = await Room.findOne({ billId: bill._id }).sort({ createdAt: -1 });
+  res.json({
+    ...serializeBill(bill),
+    roomCode: room?.code,
+  });
 });
 
 router.get("/:id/image", async (req, res) => {
@@ -90,6 +140,11 @@ router.get("/:id/image", async (req, res) => {
     }
 
     const resolved = path.resolve(filePath);
+    if (!fs.existsSync(resolved)) {
+      res.status(404).json({ error: "Image file no longer exists" });
+      return;
+    }
+
     res.sendFile(resolved);
   } catch (error) {
     res.status(500).json({ error: "Failed to load bill image" });
@@ -121,24 +176,20 @@ router.patch("/:id", async (req, res) => {
   const {
     restaurantName,
     billDate,
-    tax,
+    taxes,
     serviceCharge,
     subtotal,
     grandTotal,
-    cgst,
-    sgst,
-    vat,
+    isManuallyModified,
   } = req.body;
 
   if (restaurantName !== undefined) bill.restaurantName = restaurantName;
   if (billDate !== undefined) bill.billDate = billDate;
-  if (tax !== undefined) bill.tax = Number(tax);
+  if (Array.isArray(taxes)) bill.taxes = taxes;
   if (serviceCharge !== undefined) bill.serviceCharge = Number(serviceCharge);
   if (subtotal !== undefined) bill.subtotal = Number(subtotal);
   if (grandTotal !== undefined) bill.grandTotal = Number(grandTotal);
-  if (cgst !== undefined) bill.cgst = Number(cgst);
-  if (sgst !== undefined) bill.sgst = Number(sgst);
-  if (vat !== undefined) bill.vat = Number(vat);
+  if (isManuallyModified !== undefined) bill.isManuallyModified = Boolean(isManuallyModified);
 
   await bill.save();
   res.json(serializeBill(bill));
@@ -229,6 +280,19 @@ router.post("/:id/retry", async (req, res) => {
   );
 
   res.json({ id: bill._id.toString(), status: bill.status });
+});
+
+router.delete("/:id", async (req, res) => {
+  const bill = await Bill.findByIdAndDelete(req.params.id);
+  if (!bill) {
+    res.status(404).json({ error: "Bill not found" });
+    return;
+  }
+  await Room.deleteMany({ billId: bill._id }).catch(() => {});
+  if (bill.tempFilePath) {
+    await deleteTempFile(bill.tempFilePath).catch(() => {});
+  }
+  res.json({ success: true, id: req.params.id });
 });
 
 export default router;

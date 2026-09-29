@@ -16,12 +16,8 @@ Return ONLY valid JSON matching this schema:
   "billDate": "string (as shown on bill, e.g. YYYY-MM-DD or DD/MM/YYYY)",
   "items": [{ "name": "string", "price": number, "quantity": number, "unitPrice": number or null }],
   "subtotal": number or null,
-  "tax": number,
+  "taxes": [{ "name": "string (e.g. CGST, SGST, VAT, Sales Tax, Cess)", "rate": number or null, "amount": number }],
   "serviceCharge": number,
-  "cgst": number,
-  "sgst": number,
-  "vat": number,
-  "otherTax": number,
   "discount": number,
   "tip": number,
   "grandTotal": number or null,
@@ -33,22 +29,27 @@ Return ONLY valid JSON matching this schema:
 Strict Rules for Item Extraction:
 1. Extract EVERY purchased line item visible on the receipt. Never omit any item.
 2. PRESERVE DUPLICATE LINES: Receipts often contain multiple identical items listed on separate lines (e.g. 3 separate lines of "RED BULL ENERGY DRINK"). You MUST keep them as 3 separate items in the "items" array. Never collapse, merge, or deduplicate separate receipt lines into a single entry unless they are printed as a single line with quantity > 1.
-3. Quantity & Price:
+3. Quantity, Price, and Column Disambiguation:
    - "quantity" = quantity ordered as printed on that item line (default 1).
-   - "price" = LINE TOTAL / AMOUNT column for that item line (not per-unit rate).
+   - "price" = LINE TOTAL for that item line (i.e. quantity × unit rate).
    - "unitPrice" = rate per single unit if printed separately on the receipt, else null.
-   - Example: Qty 2, Rate 549, Amount 1098 → { "name": "DRUMS OF HEAVEN", "quantity": 2, "price": 1098, "unitPrice": 549 }
-4. Separating Charges from Items:
+   - CRITICAL FOR TABLES WITH BOTH 'Price' AND 'Total' COLUMNS:
+     * The column titled "Total" or "Amount" on the receipt is the LINE TOTAL -> set JSON "price" to this value.
+     * The column titled "Price" or "Rate" on the receipt is the single unit price -> set JSON "unitPrice" to this value.
+     * NEVER set JSON "price" to the single unit price when a line total exists!
+     * Example: "Cold Coffee | Price 427.00 | Qty 2 | Total 854.00" -> { "name": "Cold Coffee", "quantity": 2, "price": 854, "unitPrice": 427 }
+4. Separating Taxes & Charges from Items:
    - Food & beverage items only belong in "items".
-   - NEVER put tax, CGST, SGST, VAT, service charge, subtotal, gross total, discount, tip, or payment info into "items".
-   - Extract individual charges separately:
-     * "cgst" = Central GST amount
-     * "sgst" = State GST amount
-     * "vat" = VAT amount (e.g. 10% VAT on liquor/beverages)
-     * "tax" = total tax (cgst + sgst + vat + otherTax)
-     * "serviceCharge" = service charge amount
-     * "discount" = total discount amount if present
-     * "tip" = tip amount if present
+   - NEVER put taxes, service charge, subtotal, gross total, discount, tip, or payment info into "items".
+   - Extract ALL tax line items on the receipt into the "taxes" array:
+     * Format: { "name": "tax name (e.g. CGST, SGST, VAT, Sales Tax, Cess)", "rate": rate_number_or_null, "amount": tax_amount }
+     * Example: CGST @ 2.5% 114.65 -> { "name": "CGST", "rate": 2.5, "amount": 114.65 }
+     * Example: SGST @ 2.5% 114.65 -> { "name": "SGST", "rate": 2.5, "amount": 114.65 }
+     * Example: VAT 10% 350.00 -> { "name": "VAT", "rate": 10, "amount": 350.00 }
+   - Extract non-tax charges separately:
+     * "serviceCharge" = Service charge or Service Tax amount (e.g. S.Tax, Service Charge).
+     * "discount" = Total discount amount if present.
+     * "tip" = Tip amount if present.
 5. Subtotal & Grand Total Breakdown:
    - "subtotal" / "receiptSubtotal": exact printed subtotal before taxes/charges.
    - "printedBillTotal": exact total before rounding.
@@ -284,8 +285,9 @@ export async function parseBillFromImage(imagePath: string) {
       `  · ${item.quantity > 1 ? `${item.quantity}× ` : ""}${item.name} → ₹${item.price}`
     );
   }
-  if ((parsed.tax ?? 0) > 0) {
-    console.log(`  · tax ₹${parsed.tax}, total ₹${parsed.grandTotal ?? "?"}`);
+  const totalTax = (parsed.taxes ?? []).reduce((sum, t) => sum + (t.amount || 0), 0);
+  if (totalTax > 0) {
+    console.log(`  · total taxes ₹${totalTax.toFixed(2)}, total ₹${parsed.grandTotal ?? "?"}`);
   }
   return parsed;
 }
