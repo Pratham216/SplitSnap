@@ -18,7 +18,7 @@ export const config = {
   openRouterVisionModel:
     process.env.OPENROUTER_VISION_MODEL ?? "openai/gpt-4o-mini",
   openRouterMaxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS ?? "2048", 10),
-  visionProvider: (process.env.VISION_PROVIDER ?? "openrouter") as VisionProvider,
+  visionProvider: (process.env.VISION_PROVIDER ?? "nvidia") as VisionProvider,
   nvidiaApiKey: process.env.NVIDIA_API_KEY ?? "",
   nvidiaVisionModel:
     process.env.NVIDIA_VISION_MODEL ??
@@ -33,6 +33,10 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-in-production",
   roomExpiryMs: parseInt(process.env.ROOM_EXPIRY_HOURS ?? "24", 10) * 60 * 60 * 1000,
   clerkSecretKey: process.env.CLERK_SECRET_KEY ?? "",
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ?? "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET ?? "",
+  cloudinaryUrl: process.env.CLOUDINARY_URL ?? "",
 };
 
 export function isVisionConfigured(): boolean {

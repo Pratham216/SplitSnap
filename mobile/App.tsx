@@ -1,8 +1,15 @@
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { LogBox, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
+
+LogBox.ignoreLogs([
+  "Clerk - DEPRECATION WARNING",
+  "Clerk: Clerk has been loaded with development keys",
+  "@clerk/clerk-expo is deprecated",
+]);
+LogBox.ignoreAllLogs(true);
 import { QueryClientProvider } from "@tanstack/react-query";
 import { tokenCache } from "./src/lib/tokenCache";
 import { queryClient } from "./src/lib/queryClient";

@@ -3,6 +3,8 @@ import { apiRequest } from "../lib/api";
 import { resolveApiToken } from "../lib/auth";
 import { getApiUrl } from "../lib/config";
 
+import type { TaxBreakdown } from "@zaptab/shared";
+
 export interface BillItem {
   id: string;
   name: string;
@@ -17,22 +19,24 @@ export interface Bill {
   items: BillItem[];
   subtotal?: number;
   tax: number;
+  taxes?: TaxBreakdown[];
   serviceCharge: number;
-  cgst?: number;
-  sgst?: number;
-  vat?: number;
-  otherTax?: number;
   grandTotal?: number;
   status: "uploading" | "processing" | "parsed" | "failed";
   errorMessage?: string;
   hasImage?: boolean;
   imageUrl?: string;
+  roomCode?: string;
+  isManuallyModified?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export function getBillImageUrl(billId: string): string {
-  return `${getApiUrl()}/bills/${billId}/image`;
+export function getBillImageUrl(billIdOrUrl: string): string {
+  if (billIdOrUrl.startsWith("http://") || billIdOrUrl.startsWith("https://")) {
+    return billIdOrUrl;
+  }
+  return `${getApiUrl()}/bills/${billIdOrUrl}/image`;
 }
 
 export interface PickedReceiptAsset {
@@ -98,6 +102,14 @@ export async function uploadBillImage(
   return JSON.parse(result.body) as { id: string; status: Bill["status"] };
 }
 
+export async function getRecentServerBills(): Promise<Bill[]> {
+  try {
+    return await apiRequest<Bill[]>("/bills/recent");
+  } catch {
+    return [];
+  }
+}
+
 export async function getBill(id: string): Promise<Bill> {
   return apiRequest<Bill>(`/bills/${id}`);
 }
@@ -153,4 +165,8 @@ export async function updateBillItem(
 
 export async function deleteBillItem(billId: string, itemId: string): Promise<Bill> {
   return apiRequest(`/bills/${billId}/items/${itemId}`, { method: "DELETE" });
+}
+
+export async function deleteBill(billId: string): Promise<{ success: boolean; id: string }> {
+  return apiRequest(`/bills/${billId}`, { method: "DELETE" });
 }

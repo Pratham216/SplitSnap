@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBill } from "../api/bills";
+import { deleteBill, getBill, getBillImageUrl, getRecentServerBills } from "../api/bills";
 import { createRoom } from "../api/rooms";
 import { getBillDisplayTotal } from "../lib/billTotals";
 import {
@@ -14,12 +14,30 @@ export const BILLS_QUERY_KEY = ["recentReceipts"] as const;
 
 /**
  * React Query hook to fetch and cache recent receipts.
- * Automatically manages background refetching and cache invalidation.
+ * Synchronizes server bills from MongoDB with local device storage.
  */
 export function useRecentReceiptsQuery() {
   return useQuery<ReceiptEntry[]>({
     queryKey: BILLS_QUERY_KEY,
-    queryFn: getRecentReceipts,
+    queryFn: async () => {
+      const serverBills = await getRecentServerBills();
+      return serverBills.map((sb) => {
+        const total = getBillDisplayTotal(sb);
+        return {
+          billId: sb.id,
+          restaurantName: sb.restaurantName || "Receipt",
+          billDate: sb.billDate,
+          total: total || 0,
+          roomCode: sb.roomCode,
+          savedAt: sb.createdAt || new Date().toISOString(),
+          imageUrl: sb.imageUrl
+            ? getBillImageUrl(sb.imageUrl)
+            : sb.hasImage
+            ? getBillImageUrl(sb.id)
+            : undefined,
+        };
+      });
+    },
   });
 }
 
@@ -30,7 +48,10 @@ export function useRemoveReceiptMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (billId: string) => removeReceipt(billId),
+    mutationFn: async (billId: string) => {
+      await removeReceipt(billId).catch(() => {});
+      await deleteBill(billId);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
     },

@@ -11,12 +11,8 @@ export function getBillForShare(bill: Bill) {
       quantity: i.quantity,
     })),
     subtotal: bill.subtotal,
-    tax: bill.tax,
+    taxes: bill.taxes,
     serviceCharge: bill.serviceCharge,
-    cgst: bill.cgst,
-    sgst: bill.sgst,
-    vat: bill.vat,
-    otherTax: bill.otherTax,
     grandTotal: bill.grandTotal,
   };
 }

@@ -32,17 +32,12 @@ export function sumItemPrices(items: { price: number }[]): number {  return item
 
 export function getTotalTax(bill: {
   tax?: number;
-  cgst?: number;
-  sgst?: number;
-  vat?: number;
-  otherTax?: number;
+  taxes?: { amount: number }[];
 }): number {
-  const cgst = bill.cgst ?? 0;
-  const sgst = bill.sgst ?? 0;
-  const vat = bill.vat ?? 0;
-  const otherTax = bill.otherTax ?? 0;
-  const itemTaxSum = roundMoney(cgst + sgst + vat + otherTax);
-  return itemTaxSum > 0 ? itemTaxSum : (bill.tax ?? 0);
+  if (Array.isArray(bill.taxes) && bill.taxes.length > 0) {
+    return roundMoney(bill.taxes.reduce((sum, t) => sum + (t.amount || 0), 0));
+  }
+  return bill.tax ?? 0;
 }
 
 export function recalcBillFromItems(bill: Bill): Bill {

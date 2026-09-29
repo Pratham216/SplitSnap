@@ -6,6 +6,12 @@ export interface BillItem {
   unitPrice?: number;
 }
 
+export interface TaxBreakdown {
+  name: string;
+  rate?: number;
+  amount: number;
+}
+
 export interface Bill {
   id: string;
   restaurantName: string;
@@ -13,11 +19,8 @@ export interface Bill {
   items: BillItem[];
   subtotal?: number;
   tax: number;
+  taxes?: TaxBreakdown[];
   serviceCharge: number;
-  cgst?: number;
-  sgst?: number;
-  vat?: number;
-  otherTax?: number;
   discount?: number;
   tip?: number;
   grandTotal?: number;
@@ -28,6 +31,7 @@ export interface Bill {
   isItemSubtotalValid?: boolean;
   requiresVerification?: boolean;
   validationWarnings?: string[];
+  isManuallyModified?: boolean;
   status: "uploading" | "processing" | "parsed" | "failed";
   errorMessage?: string;
   createdAt: string;
@@ -69,13 +73,11 @@ export async function updateBill(
       Bill,
       | "restaurantName"
       | "billDate"
-      | "tax"
+      | "taxes"
       | "serviceCharge"
       | "subtotal"
       | "grandTotal"
-      | "cgst"
-      | "sgst"
-      | "vat"
+      | "isManuallyModified"
     >
   >
 ): Promise<Bill> {

@@ -98,19 +98,17 @@ export default function BillReviewScreen({ navigation, route }: Props) {
 
     async function poll() {
       try {
-        const next = await getBillStatus(billId);
+        const data = await getBill(billId);
         if (cancelled) return;
 
-        setStatus(next.status);
-        setError(next.errorMessage ?? null);
+        setStatus(data.status);
+        setBill(data);
+        setError(data.errorMessage ?? null);
 
-        if (next.status === "parsed" || next.status === "failed") {
-          const data = await getBill(billId);
-          if (!cancelled) {
-            setBill(data);
-            if (data.status === "parsed") {
-              await persistReceiptFromBill(data, undefined, imageUri);
-            }
+        if (data.status === "parsed" || data.status === "failed") {
+          if (data.status === "parsed") {
+            await persistReceiptFromBill(data, undefined, imageUri);
+            void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
           }
           return;
         }
@@ -120,6 +118,8 @@ export default function BillReviewScreen({ navigation, route }: Props) {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load bill");
+          timer = setTimeout(poll, delayMs);
+          delayMs = Math.min(delayMs * 1.5, 10000);
         }
       }
     }
@@ -130,13 +130,12 @@ export default function BillReviewScreen({ navigation, route }: Props) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [billId, loadBill]);
+  }, [billId, status, imageUri, queryClient]);
 
   useFocusEffect(
     useCallback(() => {
-      if (status !== "parsed") return;
       void loadBill();
-    }, [loadBill, status])
+    }, [loadBill])
   );
 
   async function handleRetry() {
@@ -153,22 +152,31 @@ export default function BillReviewScreen({ navigation, route }: Props) {
     }
   }
 
-  if (status === "processing" || status === "uploading") {
+  if (bill && (bill.status === "parsed" || status === "parsed")) {
     return (
-      <ScreenContainer center>
-        <View style={styles.processingCircle}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-        <Text style={[typography.heading, styles.centerTitle]}>
-          Analyzing your bill
-          <AnimatedEllipsis style={styles.ellipsis} />
-        </Text>
-        <Text style={[typography.body, styles.centerBody]}>
-          We're reading the receipt and itemizing everything. This only takes a
-          few seconds.
-        </Text>
-        {error && <Text style={styles.errorText}>{getDisplayErrorMessage(error)}</Text>}
-      </ScreenContainer>
+      <BillEditor
+        key={bill.id}
+        initialBill={bill}
+        focusSplit={focusSplit}
+        defaultHostName={user?.name}
+        defaultHostUpiId={user?.upiId}
+        onBillChange={handleBillChange}
+        onScanAnother={() => navigation.navigate("Main")}
+        onRoomCreated={async (code) => {
+          setRoomCode(code);
+          const latest = await getBill(billId);
+          setBill(latest);
+          await persistReceiptFromBill(latest, code);
+          await saveRoom({
+            code,
+            role: "host",
+            restaurantName: latest.restaurantName,
+          });
+          void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
+          void queryClient.invalidateQueries({ queryKey: ROOMS_QUERY_KEY });
+          navigation.replace("Room", { code });
+        }}
+      />
     );
   }
 
@@ -197,38 +205,21 @@ export default function BillReviewScreen({ navigation, route }: Props) {
     );
   }
 
-  if (!bill) {
-    return (
-      <ScreenContainer center>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </ScreenContainer>
-    );
-  }
-
   return (
-    <BillEditor
-      key={bill.id}
-      initialBill={bill}
-      focusSplit={focusSplit}
-      defaultHostName={user?.name}
-      defaultHostUpiId={user?.upiId}
-      onBillChange={handleBillChange}
-      onScanAnother={() => navigation.navigate("Main")}
-      onRoomCreated={async (code) => {
-        setRoomCode(code);
-        const latest = await getBill(billId);
-        setBill(latest);
-        await persistReceiptFromBill(latest, code);
-        await saveRoom({
-          code,
-          role: "host",
-          restaurantName: latest.restaurantName,
-        });
-        void queryClient.invalidateQueries({ queryKey: BILLS_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: ROOMS_QUERY_KEY });
-        navigation.replace("Room", { code });
-      }}
-    />
+    <ScreenContainer center>
+      <View style={styles.processingCircle}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+      <Text style={[typography.heading, styles.centerTitle]}>
+        Analyzing your bill
+        <AnimatedEllipsis style={styles.ellipsis} />
+      </Text>
+      <Text style={[typography.body, styles.centerBody]}>
+        We're reading the receipt and itemizing everything. This only takes a
+        few seconds.
+      </Text>
+      {error && <Text style={styles.errorText}>{getDisplayErrorMessage(error)}</Text>}
+    </ScreenContainer>
   );
 }
 

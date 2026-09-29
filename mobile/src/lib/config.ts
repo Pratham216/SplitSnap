@@ -14,6 +14,14 @@ function getLocalDevApiUrl(): string {
 let _loggedUrl: string | null = null;
 
 export function getApiUrl(): string {
+  if (Platform.OS === "web" && __DEV__) {
+    const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
+    if (fromEnv && (fromEnv.includes("localhost") || fromEnv.includes("127.0.0.1"))) {
+      return fromEnv.replace(/\/$/, "");
+    }
+    return "http://localhost:3001";
+  }
+
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (fromEnv) {
     const url = fromEnv.replace(/\/$/, "");

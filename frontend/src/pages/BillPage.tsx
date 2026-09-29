@@ -153,17 +153,20 @@ function billsMatchForSave(a: Bill, b: Bill): boolean {
   if (
     a.restaurantName !== b.restaurantName ||
     a.billDate !== b.billDate ||
-    a.tax !== b.tax ||
     a.serviceCharge !== b.serviceCharge ||
-    a.cgst !== b.cgst ||
-    a.sgst !== b.sgst ||
-    a.vat !== b.vat ||
     a.subtotal !== b.subtotal ||
     a.grandTotal !== b.grandTotal ||
-    a.items.length !== b.items.length
+    a.items.length !== b.items.length ||
+    (a.taxes?.length ?? 0) !== (b.taxes?.length ?? 0)
   ) {
     return false;
   }
+  const taxesMatch = (a.taxes ?? []).every((t, i) => {
+    const ob = b.taxes?.[i];
+    return ob && t.name === ob.name && t.amount === ob.amount && t.rate === ob.rate;
+  });
+  if (!taxesMatch) return false;
+
   return a.items.every((item, i) => {
     const other = b.items[i];
     return (
@@ -201,13 +204,13 @@ async function persistBillToServer(lastSaved: Bill, draft: Bill): Promise<Bill> 
   if (serverBill.billDate !== draft.billDate) {
     billPatch.billDate = draft.billDate;
   }
-  if (serverBill.tax !== draft.tax) billPatch.tax = draft.tax;
   if (serverBill.serviceCharge !== draft.serviceCharge) {
     billPatch.serviceCharge = draft.serviceCharge;
   }
-  if (serverBill.cgst !== draft.cgst) billPatch.cgst = draft.cgst;
-  if (serverBill.sgst !== draft.sgst) billPatch.sgst = draft.sgst;
-  if (serverBill.vat !== draft.vat) billPatch.vat = draft.vat;
+  if (JSON.stringify(serverBill.taxes) !== JSON.stringify(draft.taxes)) {
+    billPatch.taxes = draft.taxes;
+    billPatch.isManuallyModified = true;
+  }
   if (serverBill.subtotal !== draft.subtotal) billPatch.subtotal = draft.subtotal;
   if (serverBill.grandTotal !== draft.grandTotal) {
     billPatch.grandTotal = draft.grandTotal;
@@ -302,13 +305,10 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
         Bill,
         | "restaurantName"
         | "billDate"
-        | "tax"
         | "serviceCharge"
         | "subtotal"
         | "grandTotal"
-        | "cgst"
-        | "sgst"
-        | "vat"
+        | "taxes"
       >
     >
   ) {
@@ -491,59 +491,24 @@ function BillEditor({ bill: initialBill }: { bill: Bill }) {
           onChange={(v) => handleBillFieldChange({ serviceCharge: v })}
         />
 
-        {(draft.cgst !== undefined && draft.cgst > 0) ||
-        (draft.sgst !== undefined && draft.sgst > 0) ||
-        (draft.vat !== undefined && draft.vat > 0) ? (
-          <>
-            {draft.cgst !== undefined && (
-              <NumberField
-                label="CGST"
-                value={draft.cgst}
-                onChange={(v) =>
-                  handleBillFieldChange({
-                    cgst: v,
-                    tax: (v || 0) + (draft.sgst || 0) + (draft.vat || 0),
-                  })
-                }
-              />
-            )}
-            {draft.sgst !== undefined && (
-              <NumberField
-                label="SGST"
-                value={draft.sgst}
-                onChange={(v) =>
-                  handleBillFieldChange({
-                    sgst: v,
-                    tax: (draft.cgst || 0) + (v || 0) + (draft.vat || 0),
-                  })
-                }
-              />
-            )}
-            {draft.vat !== undefined && (
-              <NumberField
-                label="VAT"
-                value={draft.vat}
-                onChange={(v) =>
-                  handleBillFieldChange({
-                    vat: v,
-                    tax: (draft.cgst || 0) + (draft.sgst || 0) + (v || 0),
-                  })
-                }
-              />
-            )}
-            <NumberField
-              label="Total Tax"
-              value={displayTotalTax}
-              onChange={(v) => handleBillFieldChange({ tax: v })}
-            />
-          </>
-        ) : (
+        {(draft.taxes ?? []).map((t, idx) => (
           <NumberField
-            label="Tax (GST)"
-            value={displayTotalTax}
-            onChange={(v) => handleBillFieldChange({ tax: v })}
+            key={`${t.name}-${idx}`}
+            label={t.name}
+            value={t.amount}
+            onChange={(v) => {
+              const updatedTaxes = [...(draft.taxes ?? [])];
+              updatedTaxes[idx] = { ...t, amount: v };
+              handleBillFieldChange({ taxes: updatedTaxes });
+            }}
           />
-        )}
+        ))}
+
+        <NumberField
+          label="Total Tax"
+          value={displayTotalTax}
+          onChange={() => {}}
+        />
 
         <NumberField
           label="Subtotal"

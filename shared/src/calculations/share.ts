@@ -1,12 +1,12 @@
+import type { TaxBreakdown } from "../schemas/bill";
+
 export interface BillForShare {
   items: { id: string; price: number; quantity: number }[];
   subtotal?: number;
-  tax: number;
+  taxes?: TaxBreakdown[];
   serviceCharge: number;
-  cgst?: number;
-  sgst?: number;
-  vat?: number;
-  otherTax?: number;
+  discount?: number;
+  tip?: number;
   grandTotal?: number;
 }
 
@@ -17,10 +17,7 @@ export type SelectionsMap = Record<string, ItemClaims>;
 export interface ShareBreakdown {
   itemsTotal: number;
   tax: number;
-  cgst: number;
-  sgst: number;
-  vat: number;
-  otherTax: number;
+  taxes: TaxBreakdown[];
   serviceCharge: number;
   total: number;
   ratio: number;
@@ -31,18 +28,10 @@ export function roundMoney(val: number): number {
 }
 
 export function getTotalTaxForBill(bill: {
-  tax?: number;
-  cgst?: number;
-  sgst?: number;
-  vat?: number;
-  otherTax?: number;
+  taxes?: TaxBreakdown[];
 }): number {
-  const cgst = bill.cgst ?? 0;
-  const sgst = bill.sgst ?? 0;
-  const vat = bill.vat ?? 0;
-  const otherTax = bill.otherTax ?? 0;
-  const itemTaxSum = roundMoney(cgst + sgst + vat + otherTax);
-  return itemTaxSum > 0 ? itemTaxSum : (bill.tax ?? 0);
+  const list = bill.taxes ?? [];
+  return roundMoney(list.reduce((sum, t) => sum + (t.amount || 0), 0));
 }
 
 export function getItemUnitPrice(item: { price: number; quantity: number }): number {
@@ -81,39 +70,24 @@ export function calculatePersonShare(
 
   const ratio = subtotal > 0 ? myItemsTotal / subtotal : 0;
 
-  const hasGranularTax =
-    (bill.cgst ?? 0) > 0 ||
-    (bill.sgst ?? 0) > 0 ||
-    (bill.vat ?? 0) > 0 ||
-    (bill.otherTax ?? 0) > 0;
+  const allocatedTaxes: TaxBreakdown[] = (bill.taxes ?? []).map((t) => ({
+    name: t.name,
+    rate: t.rate,
+    amount: roundMoney((t.amount || 0) * ratio),
+  }));
 
-  let cgst = 0;
-  let sgst = 0;
-  let vat = 0;
-  let otherTax = 0;
-  let tax = 0;
-
-  if (hasGranularTax) {
-    cgst = roundMoney((bill.cgst ?? 0) * ratio);
-    sgst = roundMoney((bill.sgst ?? 0) * ratio);
-    vat = roundMoney((bill.vat ?? 0) * ratio);
-    otherTax = roundMoney((bill.otherTax ?? 0) * ratio);
-    tax = roundMoney(cgst + sgst + vat + otherTax);
-  } else {
-    tax = roundMoney((bill.tax ?? 0) * ratio);
-  }
+  const totalTax = roundMoney(
+    allocatedTaxes.reduce((sum, t) => sum + t.amount, 0)
+  );
 
   const serviceCharge = roundMoney((bill.serviceCharge ?? 0) * ratio);
   const roundedItemsTotal = roundMoney(myItemsTotal);
-  const total = roundMoney(roundedItemsTotal + tax + serviceCharge);
+  const total = roundMoney(roundedItemsTotal + totalTax + serviceCharge);
 
   return {
     itemsTotal: roundedItemsTotal,
-    tax,
-    cgst,
-    sgst,
-    vat,
-    otherTax,
+    tax: totalTax,
+    taxes: allocatedTaxes,
     serviceCharge,
     total,
     ratio,

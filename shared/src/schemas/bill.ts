@@ -23,6 +23,15 @@ export const BillItemSchema = z.object({
   unitPrice: nullableNumber(),
 });
 
+export const TaxBreakdownSchema = z.object({
+  name: z.string().min(1),
+  rate: nullableNumber(),
+  amount: z.preprocess(
+    (val) => (val === null || val === undefined ? 0 : val),
+    z.number().nonnegative().default(0)
+  ),
+});
+
 export const ParsedBillSchema = z.object({
   restaurantName: z.preprocess(
     (val) => (val === null || val === undefined ? "" : String(val)),
@@ -34,12 +43,8 @@ export const ParsedBillSchema = z.object({
   ),
   items: z.array(BillItemSchema).default([]),
   subtotal: nullableNumber(),
-  tax: nullableNumber(0),
+  taxes: z.array(TaxBreakdownSchema).default([]),
   serviceCharge: nullableNumber(0),
-  cgst: nullableNumber(0),
-  sgst: nullableNumber(0),
-  vat: nullableNumber(0),
-  otherTax: nullableNumber(0),
   discount: nullableNumber(0),
   tip: nullableNumber(0),
   grandTotal: nullableNumber(),
@@ -50,9 +55,11 @@ export const ParsedBillSchema = z.object({
   isItemSubtotalValid: z.boolean().optional().default(true),
   requiresVerification: z.boolean().optional().default(false),
   validationWarnings: z.array(z.string()).optional().default([]),
+  isManuallyModified: z.boolean().optional().default(false),
 });
 
 export type BillItem = z.infer<typeof BillItemSchema>;
+export type TaxBreakdown = z.infer<typeof TaxBreakdownSchema>;
 export type ParsedBill = z.infer<typeof ParsedBillSchema>;
 
 export const BillStatusSchema = z.enum([

@@ -32,10 +32,11 @@ function runRoomSettlementTests() {
       { id: "item-10", price: 699, quantity: 1 },
     ],
     subtotal: 8086.0,
-    cgst: 114.65,
-    sgst: 114.65,
-    vat: 350.0,
-    tax: 350.0, // legacy tax field on bill object
+    taxes: [
+      { name: "CGST", rate: 2.5, amount: 114.65 },
+      { name: "SGST", rate: 2.5, amount: 114.65 },
+      { name: "VAT", amount: 350.0 },
+    ],
     serviceCharge: 808.6,
     grandTotal: 9473.9,
   };
@@ -59,17 +60,18 @@ function runRoomSettlementTests() {
 
   const share100 = calculatePersonShare(sampleBill, selections100, "p1");
   console.log(`  · Items Total: ₹${share100.itemsTotal.toFixed(2)}`);
-  console.log(`  · CGST: ₹${share100.cgst.toFixed(2)}`);
-  console.log(`  · SGST: ₹${share100.sgst.toFixed(2)}`);
-  console.log(`  · VAT: ₹${share100.vat.toFixed(2)}`);
+  share100.taxes.forEach((t) => {
+    console.log(`  · ${t.name}: ₹${t.amount.toFixed(2)}`);
+  });
   console.log(`  · Total Tax: ₹${share100.tax.toFixed(2)}`);
   console.log(`  · Service Charge: ₹${share100.serviceCharge.toFixed(2)}`);
   console.log(`  · Participant Final Share: ₹${share100.total.toFixed(2)}`);
 
   assert(share100.itemsTotal === 8086.0, "Items total should be 8086.00");
-  assert(share100.cgst === 114.65, "CGST should be 114.65");
-  assert(share100.sgst === 114.65, "SGST should be 114.65");
-  assert(share100.vat === 350.0, "VAT should be 350.00");
+  assert(share100.taxes.length === 3, "Taxes count should be 3");
+  assert(share100.taxes[0].amount === 114.65, "CGST amount should be 114.65");
+  assert(share100.taxes[1].amount === 114.65, "SGST amount should be 114.65");
+  assert(share100.taxes[2].amount === 350.0, "VAT amount should be 350.00");
   assert(share100.tax === 579.3, "Total Tax should be 579.30 (114.65+114.65+350)");
   assert(share100.serviceCharge === 808.6, "Service charge should be 808.60");
   assert(share100.total === 9473.9, "Final share should be exactly 9473.90");
@@ -206,16 +208,16 @@ function runRoomSettlementTests() {
   console.log("  ✅ TEST 5 PASSED!\n");
 
   // ----------------------------------------------------
-  // TEST 6: Legacy Bill Fallback (No CGST/SGST/VAT)
+  // TEST 6: Single Dynamic Tax (e.g. Combined GST)
   // ----------------------------------------------------
-  console.log("[TEST 6] Legacy Bill Fallback (Combined Single Tax)");
-  const legacyBill: BillForShare = {
+  console.log("[TEST 6] Single Dynamic Tax");
+  const singleTaxBill: BillForShare = {
     items: [
       { id: "item-1", price: 1000, quantity: 1 },
       { id: "item-2", price: 2000, quantity: 1 },
     ],
     subtotal: 3000,
-    tax: 300,
+    taxes: [{ name: "GST", amount: 300 }],
     serviceCharge: 300,
     grandTotal: 3600,
   };
@@ -225,14 +227,14 @@ function runRoomSettlementTests() {
     "item-2": { p2: 1 },
   };
 
-  const legacyShares = calculateRoomShares(legacyBill, legacySelections, ["p1", "p2"]);
+  const legacyShares = calculateRoomShares(singleTaxBill, legacySelections, ["p1", "p2"]);
   const legacySum = Math.round((legacyShares.p1.total + legacyShares.p2.total) * 100) / 100;
-  console.log(`  · Legacy P1 Share: ₹${legacyShares.p1.total.toFixed(2)} (expected ₹1200)`);
-  console.log(`  · Legacy P2 Share: ₹${legacyShares.p2.total.toFixed(2)} (expected ₹2400)`);
+  console.log(`  · P1 Share: ₹${legacyShares.p1.total.toFixed(2)} (expected ₹1200)`);
+  console.log(`  · P2 Share: ₹${legacyShares.p2.total.toFixed(2)} (expected ₹2400)`);
   console.log(`  · Sum of Shares: ₹${legacySum.toFixed(2)} vs Expected: ₹3600.00`);
-  assert(legacyShares.p1.total === 1200.0, "Legacy P1 total should be 1200");
-  assert(legacyShares.p2.total === 2400.0, "Legacy P2 total should be 2400");
-  assert(legacySum === 3600.0, "Legacy sum must equal 3600.00");
+  assert(legacyShares.p1.total === 1200.0, "P1 total should be 1200");
+  assert(legacyShares.p2.total === 2400.0, "P2 total should be 2400");
+  assert(legacySum === 3600.0, "Sum must equal 3600.00");
   console.log("  ✅ TEST 6 PASSED!\n");
 
   console.log("=========================================");

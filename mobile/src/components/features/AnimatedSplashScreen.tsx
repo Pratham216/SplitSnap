@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   centerContent: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -182,26 +183,37 @@ const styles = StyleSheet.create({
     height: 110,
   },
   brandWrapper: {
+    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.xs,
   },
   tagWrapper: {
+    width: "100%",
     marginTop: spacing.xs,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tagline: {
     fontSize: 11,
     letterSpacing: 3,
     color: "#888891",
     fontWeight: "600",
+    textAlign: "center",
   },
   footer: {
     position: "absolute",
     bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   footerText: {
     fontSize: 12,
     color: "#4A4A52",
     fontWeight: "500",
     letterSpacing: 0.5,
+    textAlign: "center",
   },
 });

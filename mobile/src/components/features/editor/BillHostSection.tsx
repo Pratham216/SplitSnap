@@ -7,7 +7,7 @@ import { colors, fontSize, radius, spacing } from "../../../theme";
 import BillField from "./BillField";
 
 interface BillHostSectionProps {
-  itemsTotal: number;
+  grandTotal: number;
   hostName: string;
   onHostNameChange: (name: string) => void;
   hostUpiId: string;
@@ -20,7 +20,7 @@ interface BillHostSectionProps {
 }
 
 export default function BillHostSection({
-  itemsTotal,
+  grandTotal,
   hostName,
   onHostNameChange,
   hostUpiId,
@@ -33,8 +33,8 @@ export default function BillHostSection({
 }: BillHostSectionProps) {
   return (
     <View style={styles.premiumCard}>
-      <Text style={styles.itemsTotalLabel}>Items total</Text>
-      <GradientGoldText size="display">{formatMoney(itemsTotal)}</GradientGoldText>
+      <Text style={styles.itemsTotalLabel}>Total to split</Text>
+      <GradientGoldText size="display">{formatMoney(grandTotal)}</GradientGoldText>
 
       <View style={styles.shareFields}>
         <BillField
