@@ -25,7 +25,7 @@ const APP_VERSION =
   Constants.expoConfig?.version ||
   (Constants as any).manifest?.version ||
   packageJson.version ||
-  "1.0.2";
+  "1.0.3";
 
 interface ReleaseInfo {
   tagName: string;
