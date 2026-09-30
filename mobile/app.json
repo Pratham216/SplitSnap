@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZapTab",
     "slug": "zaptab",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a",
         "foregroundImage": "./assets/android-icon-foreground.png",

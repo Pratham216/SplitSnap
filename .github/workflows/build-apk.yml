@@ -17,6 +17,7 @@ jobs:
     env:
       EXPO_PUBLIC_API_URL: https://splitsnap-wrrg.onrender.com
       EXPO_PUBLIC_SUPPORT_EMAIL: prathambisht282@gmail.com
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZGVmaW5pdGUtaW5zZWN0LTk5LmNsZXJrLmFjY291bnRzLmRldiQ
 
     steps:
       - name: Checkout repository
